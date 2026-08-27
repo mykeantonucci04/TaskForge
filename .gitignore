@@ -1,0 +1,32 @@
+## Ignore Visual Studio / .NET files
+bin/
+obj/
+.vs/
+.idea/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Test results & coverage
+TestResults/
+coverage/
+*.coverage
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# App logs
+logs/
+*.log
+
+# Docker temporary state
+.docker/
+
+# Environment files
+.env
+.env.local

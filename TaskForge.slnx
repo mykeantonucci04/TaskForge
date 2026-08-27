@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TaskForge.Api/TaskForge.Api.csproj" />
+    <Project Path="src/TaskForge.Application/TaskForge.Application.csproj" />
+    <Project Path="src/TaskForge.Domain/TaskForge.Domain.csproj" />
+    <Project Path="src/TaskForge.Infrastructure/TaskForge.Infrastructure.csproj" />
+    <Project Path="src/TaskForge.Shared/TaskForge.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TaskForge.Api.IntegrationTests/TaskForge.Api.IntegrationTests.csproj" />
+    <Project Path="tests/TaskForge.Application.UnitTests/TaskForge.Application.UnitTests.csproj" />
+    <Project Path="tests/TaskForge.Domain.UnitTests/TaskForge.Domain.UnitTests.csproj" />
+    <Project Path="tests/TaskForge.Infrastructure.IntegrationTests/TaskForge.Infrastructure.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

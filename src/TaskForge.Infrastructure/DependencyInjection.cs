@@ -1,0 +1,55 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using TaskForge.Application.Common.Interfaces;
+using TaskForge.Domain.Entities;
+using TaskForge.Domain.Interfaces;
+using TaskForge.Infrastructure.Persistence;
+using TaskForge.Infrastructure.Persistence.Interceptors;
+using TaskForge.Infrastructure.Persistence.Repositories;
+using TaskForge.Infrastructure.Services;
+
+namespace TaskForge.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<ITenantContext, TenantContext>();
+        services.AddScoped<AuditableEntityInterceptor>();
+        services.AddScoped<TenantEntityInterceptor>();
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? "Host=localhost;Database=taskforge_db;Username=postgres;Password=postgres";
+
+        services.AddDbContext<TaskForgeDbContext>((sp, options) =>
+        {
+            var auditableInterceptor = sp.GetRequiredService<AuditableEntityInterceptor>();
+            var tenantInterceptor = sp.GetRequiredService<TenantEntityInterceptor>();
+
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(TaskForgeDbContext).Assembly.FullName);
+            })
+            .AddInterceptors(auditableInterceptor, tenantInterceptor);
+        });
+
+        // Repositories & UnitOfWork
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped<ITaskRepository, TaskRepository>();
+        services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
+        services.AddScoped<ITenantRepository, TenantRepository>();
+
+        // Infrastructure Services
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddScoped<ICurrentTenantService, CurrentTenantService>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IStorageService, S3StorageService>();
+        services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddScoped<INotificationService, SignalRNotificationService>();
+        services.AddSignalR();
+
+        return services;
+    }
+}
