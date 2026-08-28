@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TaskForge.Application.Common.Interfaces;
-using TaskForge.Domain.Entities;
 using TaskForge.Domain.Interfaces;
 using TaskForge.Infrastructure.Persistence;
 using TaskForge.Infrastructure.Persistence.Interceptors;
@@ -37,12 +36,16 @@ public static class DependencyInjection
         // Repositories & UnitOfWork
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITenantMembershipRepository, TenantMembershipRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
-        services.AddScoped<ITenantRepository, TenantRepository>();
 
         // Infrastructure Services
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<ISchemaProvisioner, PostgreSqlSchemaProvisioner>();
         services.AddScoped<ICurrentTenantService, CurrentTenantService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IStorageService, S3StorageService>();

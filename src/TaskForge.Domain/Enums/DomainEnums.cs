@@ -1,5 +1,34 @@
 namespace TaskForge.Domain.Enums;
 
+public enum TenantPlan
+{
+    Free = 1,
+    Pro = 2,
+    Enterprise = 3
+}
+
+public enum TenantStatus
+{
+    Active = 1,
+    Suspended = 2,
+    Cancelled = 3
+}
+
+public enum MembershipRole
+{
+    Owner = 1,
+    Admin = 2,
+    Member = 3,
+    Guest = 4
+}
+
+public enum MembershipStatus
+{
+    Pending = 1,
+    Active = 2,
+    Removed = 3
+}
+
 public enum TaskPriority
 {
     Low = 1,

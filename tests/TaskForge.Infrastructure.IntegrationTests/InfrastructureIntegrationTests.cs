@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using TaskForge.Domain.Common;
 using TaskForge.Domain.Entities;
+using TaskForge.Domain.Enums;
 using TaskForge.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -38,23 +40,20 @@ public class InfrastructureIntegrationTests : IAsyncLifetime
         await using var context = new TaskForgeDbContext(options, tenantContext);
         await context.Database.EnsureCreatedAsync();
 
-        var tenant = new Tenant
-        {
-            Id = Guid.NewGuid(),
-            Name = "Integration Test Tenant",
-            Identifier = "test-tenant",
-            SchemaName = "tenant_test",
-            CreatedAtUtc = DateTime.UtcNow
-        };
+        var slug = TenantSlug.Create("test-tenant");
+        var tenant = Tenant.Create("Integration Test Tenant", slug, TenantPlan.Enterprise);
 
         // Act
         context.Tenants.Add(tenant);
         await context.SaveChangesAsync();
 
-        var fetched = await context.Tenants.FirstOrDefaultAsync(t => t.Identifier == "test-tenant");
+        var fetched = await context.Tenants.FirstOrDefaultAsync(t => t.Slug == slug);
 
         // Assert
         fetched.Should().NotBeNull();
         fetched!.Name.Should().Be("Integration Test Tenant");
+        fetched.Slug.Value.Should().Be("test-tenant");
+        fetched.Plan.Should().Be(TenantPlan.Enterprise);
+        fetched.SchemaName.Should().Be("tenant_test_tenant");
     }
 }

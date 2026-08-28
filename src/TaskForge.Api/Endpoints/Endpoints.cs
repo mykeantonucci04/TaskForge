@@ -13,8 +13,15 @@ public static class EndpointsExtensions
     {
         var apiGroup = app.MapGroup("/api/v1");
 
-        // Auth Endpoints
+        // Auth Endpoints (Public)
         var auth = apiGroup.MapGroup("/auth").WithTags("Authentication");
+        
+        auth.MapPost("/register-tenant", async (RegisterTenantCommand command, ISender sender) =>
+        {
+            var result = await sender.Send(command);
+            return ToCreatedHttpResponse(result, res => $"/api/v1/tenants/{res.TenantId}");
+        }).WithName("RegisterTenant");
+
         auth.MapPost("/login", async (LoginCommand command, ISender sender) =>
         {
             var result = await sender.Send(command);
@@ -22,18 +29,25 @@ public static class EndpointsExtensions
         }).WithName("Login");
 
         // Tenant Endpoints
-        var tenants = apiGroup.MapGroup("/tenants").WithTags("Tenants").RequireAuthorization();
+        var tenants = apiGroup.MapGroup("/tenants").WithTags("Tenants");
+
+        tenants.MapPost("/register", async (RegisterTenantCommand command, ISender sender) =>
+        {
+            var result = await sender.Send(command);
+            return ToCreatedHttpResponse(result, res => $"/api/v1/tenants/{res.TenantId}");
+        }).WithName("RegisterTenantAlias");
+
         tenants.MapPost("/", async (CreateTenantCommand command, ISender sender) =>
         {
             var result = await sender.Send(command);
-            return ToHttpResponse(result);
-        }).WithName("CreateTenant");
+            return ToCreatedHttpResponse(result, res => $"/api/v1/tenants/{res.Id}");
+        }).RequireAuthorization().WithName("CreateTenant");
 
         tenants.MapGet("/{id:guid}", async (Guid id, ISender sender) =>
         {
             var result = await sender.Send(new GetTenantByIdQuery(id));
             return ToHttpResponse(result);
-        }).WithName("GetTenantById");
+        }).RequireAuthorization().WithName("GetTenantById");
 
         // Workspace Endpoints
         var workspaces = apiGroup.MapGroup("/workspaces").WithTags("Workspaces").RequireAuthorization();
@@ -80,14 +94,30 @@ public static class EndpointsExtensions
             return Microsoft.AspNetCore.Http.Results.Ok(result.Value);
         }
 
-        return result.Error.Type switch
+        return MapErrorResult(result.Error);
+    }
+
+    private static IResult ToCreatedHttpResponse<T>(Result<T> result, Func<T, string> uriSelector)
+    {
+        if (result.IsSuccess)
         {
-            ErrorType.NotFound => Microsoft.AspNetCore.Http.Results.NotFound(result.Error),
-            ErrorType.Validation => Microsoft.AspNetCore.Http.Results.BadRequest(result.Error),
-            ErrorType.Conflict => Microsoft.AspNetCore.Http.Results.Conflict(result.Error),
+            var uri = uriSelector(result.Value);
+            return Microsoft.AspNetCore.Http.Results.Created(uri, result.Value);
+        }
+
+        return MapErrorResult(result.Error);
+    }
+
+    private static IResult MapErrorResult(Error error)
+    {
+        return error.Type switch
+        {
+            ErrorType.NotFound => Microsoft.AspNetCore.Http.Results.NotFound(error),
+            ErrorType.Validation => Microsoft.AspNetCore.Http.Results.BadRequest(error),
+            ErrorType.Conflict => Microsoft.AspNetCore.Http.Results.Conflict(error),
             ErrorType.Unauthorized => Microsoft.AspNetCore.Http.Results.Unauthorized(),
             ErrorType.Forbidden => Microsoft.AspNetCore.Http.Results.Forbid(),
-            _ => Microsoft.AspNetCore.Http.Results.BadRequest(result.Error)
+            _ => Microsoft.AspNetCore.Http.Results.BadRequest(error)
         };
     }
 }

@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using TaskForge.Domain.Common;
 using TaskForge.Domain.Entities;
 using TaskForge.Domain.Interfaces;
 
@@ -8,8 +9,8 @@ namespace TaskForge.Infrastructure.Persistence.Repositories;
 public class Repository<TEntity>(TaskForgeDbContext context) : IRepository<TEntity>
     where TEntity : class
 {
-    protected readonly TaskForgeDbContext Context = context;
-    protected readonly DbSet<TEntity> DbSet = context.Set<TEntity>();
+    protected TaskForgeDbContext Context { get; } = context;
+    protected DbSet<TEntity> DbSet { get; } = context.Set<TEntity>();
 
     public async Task<TEntity?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
     {
@@ -43,6 +44,87 @@ public class Repository<TEntity>(TaskForgeDbContext context) : IRepository<TEnti
     }
 }
 
+public class TenantRepository(TaskForgeDbContext context) : Repository<Tenant>(context), ITenantRepository
+{
+    public async Task<Tenant?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(t => t.Memberships)
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+    }
+
+    public async Task<Tenant?> GetBySlugAsync(TenantSlug slug, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(t => t.Memberships)
+            .FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);
+    }
+
+    public async Task<Tenant?> GetByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
+    {
+        var slug = TenantSlug.Create(identifier);
+        return await DbSet
+            .Include(t => t.Memberships)
+            .FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);
+    }
+
+    public async Task<bool> ExistsBySlugAsync(TenantSlug slug, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.AnyAsync(t => t.Slug == slug, cancellationToken);
+    }
+}
+
+public class UserRepository(TaskForgeDbContext context) : Repository<User>(context), IUserRepository
+{
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(u => u.Memberships)
+            .Include(u => u.RefreshTokens)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
+    public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(u => u.Memberships)
+            .Include(u => u.RefreshTokens)
+            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+    }
+
+    public async Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.AnyAsync(u => u.Email == email, cancellationToken);
+    }
+}
+
+public class TenantMembershipRepository(TaskForgeDbContext context) : Repository<TenantMembership>(context), ITenantMembershipRepository
+{
+    public async Task<TenantMembership?> GetByTenantAndUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(m => m.Tenant)
+            .Include(m => m.User)
+            .FirstOrDefaultAsync(m => m.TenantId == tenantId && m.UserId == userId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TenantMembership>> GetMembershipsByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(m => m.Tenant)
+            .Where(m => m.UserId == userId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TenantMembership>> GetMembershipsByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(m => m.User)
+            .Where(m => m.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
+    }
+}
+
 public class TaskRepository(TaskForgeDbContext context) : Repository<TaskItem>(context), ITaskRepository
 {
     public async Task<TaskItem?> GetTaskWithDetailsAsync(Guid taskId, CancellationToken cancellationToken = default)
@@ -70,14 +152,6 @@ public class WorkspaceRepository(TaskForgeDbContext context) : Repository<Worksp
     public async Task<Workspace?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         return await DbSet.FirstOrDefaultAsync(w => w.Slug == slug, cancellationToken);
-    }
-}
-
-public class TenantRepository(TaskForgeDbContext context) : Repository<Tenant>(context), ITenantRepository
-{
-    public async Task<Tenant?> GetByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
-    {
-        return await DbSet.FirstOrDefaultAsync(t => t.Identifier == identifier, cancellationToken);
     }
 }
 
