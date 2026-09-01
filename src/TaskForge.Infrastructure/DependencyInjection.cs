@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TaskForge.Application.Common.Interfaces;
 using TaskForge.Domain.Interfaces;
+using TaskForge.Infrastructure.Extensions;
 using TaskForge.Infrastructure.Persistence;
 using TaskForge.Infrastructure.Persistence.Interceptors;
 using TaskForge.Infrastructure.Persistence.Repositories;
@@ -12,14 +13,23 @@ namespace TaskForge.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string? databaseConnectionString = null)
     {
         services.AddScoped<ITenantContext, TenantContext>();
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<TenantEntityInterceptor>();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Database=taskforge_db;Username=postgres;Password=postgres";
+        var connectionString = !string.IsNullOrWhiteSpace(databaseConnectionString)
+            ? databaseConnectionString
+            : configuration.ResolveDatabaseConnectionString().ConnectionString;
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = "Host=localhost;Database=taskforge_db;Username=postgres;Password=postgres";
+        }
 
         services.AddDbContext<TaskForgeDbContext>((sp, options) =>
         {

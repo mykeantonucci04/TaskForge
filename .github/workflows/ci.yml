@@ -1,0 +1,38 @@
+name: TaskForge Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 10 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore TaskForge.slnx
+
+    - name: Build solution
+      run: dotnet build TaskForge.slnx --no-restore -c Release
+
+    - name: Run Domain Unit Tests
+      run: dotnet test tests/TaskForge.Domain.UnitTests/TaskForge.Domain.UnitTests.csproj --no-build -c Release --verbosity normal
+
+    - name: Run Application Unit Tests
+      run: dotnet test tests/TaskForge.Application.UnitTests/TaskForge.Application.UnitTests.csproj --no-build -c Release --verbosity normal
+
+    - name: Run Integration Tests
+      run: dotnet test TaskForge.slnx --no-build -c Release --filter "FullyQualifiedName~IntegrationTests" --verbosity normal
+
+    - name: Build Docker Image
+      run: docker build -t taskforge-api:latest -f docker/Dockerfile .
