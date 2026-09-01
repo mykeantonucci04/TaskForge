@@ -31,21 +31,33 @@ public static class DependencyInjection
             connectionString = "Host=localhost;Database=taskforge_db;Username=postgres;Password=postgres";
         }
 
-        services.AddDbContext<TaskForgeDbContext>((sp, options) =>
+        // 1. PublicDbContext for public schema tables
+        services.AddDbContext<PublicDbContext>((sp, options) =>
+        {
+            var auditableInterceptor = sp.GetRequiredService<AuditableEntityInterceptor>();
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(PublicDbContext).Assembly.FullName);
+            })
+            .AddInterceptors(auditableInterceptor);
+        });
+
+        // 2. TenantDbContext for dynamic schema-per-tenant tables
+        services.AddDbContext<TenantDbContext>((sp, options) =>
         {
             var auditableInterceptor = sp.GetRequiredService<AuditableEntityInterceptor>();
             var tenantInterceptor = sp.GetRequiredService<TenantEntityInterceptor>();
 
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                npgsqlOptions.MigrationsAssembly(typeof(TaskForgeDbContext).Assembly.FullName);
+                npgsqlOptions.MigrationsAssembly(typeof(TenantDbContext).Assembly.FullName);
             })
             .AddInterceptors(auditableInterceptor, tenantInterceptor);
         });
 
         // Repositories & UnitOfWork
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped(typeof(IRepository<>), typeof(PublicRepository<>));
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITenantMembershipRepository, TenantMembershipRepository>();
@@ -55,9 +67,10 @@ public static class DependencyInjection
         // Infrastructure Services
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
-        services.AddScoped<ISchemaProvisioner, PostgreSqlSchemaProvisioner>();
+        services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<ISchemaProvisioner>(sp => sp.GetRequiredService<ITenantProvisioningService>());
         services.AddScoped<ICurrentTenantService, CurrentTenantService>();
-        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenService>();
         services.AddScoped<IStorageService, S3StorageService>();
         services.AddScoped<IEmailService, SmtpEmailService>();
         services.AddScoped<INotificationService, SignalRNotificationService>();
