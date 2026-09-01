@@ -19,6 +19,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.2" />
     <PackageVersion Include="AWSSDK.S3" Version="3.7.401" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.5.0" />
+    <PackageVersion Include="BCrypt.Net-Next" Version="4.0.3" />
 
     <!-- API & Auth -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.2" />

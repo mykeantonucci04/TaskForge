@@ -1,10 +1,16 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using TaskForge.Domain.Common;
 using TaskForge.Domain.Entities;
 using TaskForge.Domain.Enums;
 using TaskForge.Infrastructure.Extensions;
 using TaskForge.Infrastructure.Persistence;
+using TaskForge.Infrastructure.Services;
+using TaskForge.Shared.Constants;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -30,15 +36,14 @@ public class InfrastructureIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DbContext_Should_Create_And_Query_Tenants_In_PostgreSQL()
+    public async Task PublicDbContext_Should_Create_And_Query_Tenants_In_Public_Schema()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<TaskForgeDbContext>()
+        var options = new DbContextOptionsBuilder<PublicDbContext>()
             .UseNpgsql(_postgresContainer.GetConnectionString())
             .Options;
 
-        var tenantContext = new TenantContext();
-        await using var context = new TaskForgeDbContext(options, tenantContext);
+        await using var context = new PublicDbContext(options);
         await context.Database.EnsureCreatedAsync();
 
         var slug = TenantSlug.Create("test-tenant");
@@ -56,6 +61,101 @@ public class InfrastructureIntegrationTests : IAsyncLifetime
         fetched.Slug.Value.Should().Be("test-tenant");
         fetched.Plan.Should().Be(TenantPlan.Enterprise);
         fetched.SchemaName.Should().Be("tenant_test_tenant");
+    }
+
+    [Fact]
+    public async Task TenantProvisioningService_Should_Provision_Schema_And_Tables_Successfully()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<PublicDbContext>()
+            .UseNpgsql(_postgresContainer.GetConnectionString())
+            .Options;
+
+        await using var context = new PublicDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var service = new TenantProvisioningService(context, NullLogger<TenantProvisioningService>.Instance);
+        var schemaName = "tenant_test_company";
+
+        // Act
+        await service.ProvisionTenantSchemaAsync(schemaName);
+
+        // Assert: Verify schema exists in PostgreSQL
+        var schemaExists = false;
+        await using (var cmd = context.Database.GetDbConnection().CreateCommand())
+        {
+            await context.Database.OpenConnectionAsync();
+            cmd.CommandText = $"SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = '{schemaName}');";
+            var result = await cmd.ExecuteScalarAsync();
+            schemaExists = result is bool b && b;
+        }
+
+        schemaExists.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("tenant_invalid; DROP TABLE users;--")]
+    [InlineData("invalid_prefix")]
+    [InlineData("tenant_with spaces")]
+    public void TenantProvisioningService_Should_Throw_On_Malicious_Or_Invalid_Schema_Name(string maliciousSchema)
+    {
+        var action = () => TenantProvisioningService.ValidateAndSanitizeSchemaName(maliciousSchema);
+        action.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void PasswordHasher_Should_Hash_And_Verify_Password_Using_BCrypt()
+    {
+        var hasher = new PasswordHasher();
+        var rawPassword = "StrongPassword!2026";
+
+        var hash = hasher.HashPassword(rawPassword);
+
+        hash.Should().NotBeNullOrWhiteSpace();
+        hash.Should().StartWith("$2"); // BCrypt signature
+
+        hasher.VerifyPassword(rawPassword, hash).Should().BeTrue();
+        hasher.VerifyPassword("WrongPassword", hash).Should().BeFalse();
+    }
+
+    [Fact]
+    public void JwtTokenService_Should_Generate_Tokens_With_Required_Claims()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Secret"] = "VeryStrongSecretKeyForJwtAuthenticationTesting1234567890!",
+                ["Jwt:Issuer"] = "TaskForgeTestApi",
+                ["Jwt:Audience"] = "TaskForgeTestClient",
+                ["Jwt:ExpiryMinutes"] = "60"
+            })
+            .Build();
+
+        var service = new JwtTokenService(config);
+        var userId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+
+        var (accessToken, refreshToken, expiry) = service.GenerateTokens(
+            userId,
+            "admin@acme.com",
+            "Owner",
+            tenantId,
+            "tenant_acme");
+
+        accessToken.Should().NotBeNullOrWhiteSpace();
+        refreshToken.Should().NotBeNullOrWhiteSpace();
+        expiry.Should().BeAfter(DateTime.UtcNow);
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(accessToken);
+
+        jwt.Issuer.Should().Be("TaskForgeTestApi");
+        jwt.Audiences.Should().Contain("TaskForgeTestClient");
+        jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Sub && c.Value == userId.ToString());
+        jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Email && c.Value == "admin@acme.com");
+        jwt.Claims.Should().Contain(c => c.Type == TenantConstants.ClaimName && c.Value == tenantId.ToString());
+        jwt.Claims.Should().Contain(c => c.Type == TenantConstants.SchemaClaimName && c.Value == "tenant_acme");
+        jwt.Claims.Should().Contain(c => c.Type == "role" && c.Value == "Owner");
     }
 
     [Theory]

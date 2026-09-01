@@ -124,7 +124,7 @@ public class ApiIntegrationTests : IAsyncLifetime
     private static async Task EnsureDatabaseCreatedAsync(WebApplicationFactory<Program> factory)
     {
         using var scope = factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<TaskForgeDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<PublicDbContext>();
         await context.Database.EnsureCreatedAsync();
     }
 }

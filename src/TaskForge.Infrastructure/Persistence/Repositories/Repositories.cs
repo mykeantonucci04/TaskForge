@@ -6,10 +6,10 @@ using TaskForge.Domain.Interfaces;
 
 namespace TaskForge.Infrastructure.Persistence.Repositories;
 
-public class Repository<TEntity>(TaskForgeDbContext context) : IRepository<TEntity>
+public class PublicRepository<TEntity>(PublicDbContext context) : IRepository<TEntity>
     where TEntity : class
 {
-    protected TaskForgeDbContext Context { get; } = context;
+    protected PublicDbContext Context { get; } = context;
     protected DbSet<TEntity> DbSet { get; } = context.Set<TEntity>();
 
     public async Task<TEntity?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
@@ -44,7 +44,45 @@ public class Repository<TEntity>(TaskForgeDbContext context) : IRepository<TEnti
     }
 }
 
-public class TenantRepository(TaskForgeDbContext context) : Repository<Tenant>(context), ITenantRepository
+public class TenantScopedRepository<TEntity>(TenantDbContext context) : IRepository<TEntity>
+    where TEntity : class
+{
+    protected TenantDbContext Context { get; } = context;
+    protected DbSet<TEntity> DbSet { get; } = context.Set<TEntity>();
+
+    public async Task<TEntity?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.FindAsync([id], cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbSet.ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.Where(predicate).ToListAsync(cancellationToken);
+    }
+
+    public async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
+    {
+        var entry = await DbSet.AddAsync(entity, cancellationToken);
+        return entry.Entity;
+    }
+
+    public void Update(TEntity entity)
+    {
+        DbSet.Update(entity);
+    }
+
+    public void Remove(TEntity entity)
+    {
+        DbSet.Remove(entity);
+    }
+}
+
+public class TenantRepository(PublicDbContext context) : PublicRepository<Tenant>(context), ITenantRepository
 {
     public async Task<Tenant?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -74,7 +112,7 @@ public class TenantRepository(TaskForgeDbContext context) : Repository<Tenant>(c
     }
 }
 
-public class UserRepository(TaskForgeDbContext context) : Repository<User>(context), IUserRepository
+public class UserRepository(PublicDbContext context) : PublicRepository<User>(context), IUserRepository
 {
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -98,7 +136,7 @@ public class UserRepository(TaskForgeDbContext context) : Repository<User>(conte
     }
 }
 
-public class TenantMembershipRepository(TaskForgeDbContext context) : Repository<TenantMembership>(context), ITenantMembershipRepository
+public class TenantMembershipRepository(PublicDbContext context) : PublicRepository<TenantMembership>(context), ITenantMembershipRepository
 {
     public async Task<TenantMembership?> GetByTenantAndUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken = default)
     {
@@ -125,7 +163,7 @@ public class TenantMembershipRepository(TaskForgeDbContext context) : Repository
     }
 }
 
-public class TaskRepository(TaskForgeDbContext context) : Repository<TaskItem>(context), ITaskRepository
+public class TaskRepository(TenantDbContext context) : TenantScopedRepository<TaskItem>(context), ITaskRepository
 {
     public async Task<TaskItem?> GetTaskWithDetailsAsync(Guid taskId, CancellationToken cancellationToken = default)
     {
@@ -147,7 +185,7 @@ public class TaskRepository(TaskForgeDbContext context) : Repository<TaskItem>(c
     }
 }
 
-public class WorkspaceRepository(TaskForgeDbContext context) : Repository<Workspace>(context), IWorkspaceRepository
+public class WorkspaceRepository(TenantDbContext context) : TenantScopedRepository<Workspace>(context), IWorkspaceRepository
 {
     public async Task<Workspace?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
@@ -155,10 +193,12 @@ public class WorkspaceRepository(TaskForgeDbContext context) : Repository<Worksp
     }
 }
 
-public class UnitOfWork(TaskForgeDbContext context) : IUnitOfWork
+public class UnitOfWork(PublicDbContext publicContext, TenantDbContext? tenantContext = null) : IUnitOfWork
 {
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return await context.SaveChangesAsync(cancellationToken);
+        var publicChanges = await publicContext.SaveChangesAsync(cancellationToken);
+        var tenantChanges = tenantContext is not null ? await tenantContext.SaveChangesAsync(cancellationToken) : 0;
+        return publicChanges + tenantChanges;
     }
 }
