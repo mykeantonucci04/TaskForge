@@ -77,7 +77,7 @@ public class ApplicationUnitTests
         await _userRepository.Received(1).AddAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
         await _membershipRepository.Received(1).AddAsync(Arg.Any<TenantMembership>(), Arg.Any<CancellationToken>());
         await _schemaProvisioner.Received(1).ProvisionTenantSchemaAsync("tenant_acme_innovations", Arg.Any<CancellationToken>());
-        await _unitOfWork.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Scalar.AspNetCore;
 using TaskForge.Api.Endpoints;
 using TaskForge.Api.Middleware;
 using TaskForge.Api.Services;
@@ -49,7 +50,7 @@ builder.Services.AddAuthorization();
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Host=localhost;Port=5432;Database=taskforge_db;Username=taskforge_user;Password=TaskForgePass123!";
 builder.Services.AddHealthChecks()
-    .AddNpgSql(dbConnectionString, name: "postgresql", tags: new[] { "db", "postgres" });
+    .AddNpgSql(dbConnectionString, name: "postgresql", tags: ["db", "postgres"]);
 
 // OpenAPI 3.1 Setup
 builder.Services.AddOpenApi(options =>
@@ -74,6 +75,13 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("TaskForge API Documentation")
+            .WithTheme(ScalarTheme.Moon)
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    });
 }
 
 app.UseHttpsRedirection();

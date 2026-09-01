@@ -90,28 +90,21 @@ public class RegisterTenantCommandHandler(
 
         // 2. Get or create User
         var user = await userRepository.GetByEmailAsync(emailVo, cancellationToken);
+        var isNewUser = false;
         if (user is null)
         {
+            isNewUser = true;
             var passwordHash = passwordHasher.HashPassword(request.AdminPassword);
             user = User.Create(emailVo, passwordHash, request.AdminFirstName, request.AdminLastName);
-            await userRepository.AddAsync(user, cancellationToken);
         }
 
         // 3. Create Tenant
         var tenant = Tenant.Create(request.CompanyName, slugVo, request.Plan, user.Email.Value);
-        await tenantRepository.AddAsync(tenant, cancellationToken);
 
         // 4. Create TenantMembership as Owner
         var membership = TenantMembership.Create(tenant.Id, user.Id, MembershipRole.Owner, MembershipStatus.Active, user.Email.Value);
-        await membershipRepository.AddAsync(membership, cancellationToken);
 
-        // 5. Persist public metadata
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // 6. Provision dedicated PostgreSQL schema for tenant
-        await schemaProvisioner.ProvisionTenantSchemaAsync(tenant.SchemaName, cancellationToken);
-
-        // 7. Issue JWT Tokens for the new Owner scoped to this tenant
+        // 5. Issue JWT Tokens for the new Owner scoped to this tenant
         var (accessToken, refreshTokenStr, refreshTokenExpiry) = tokenGenerator.GenerateTokens(
             user.Id,
             user.Email.Value,
@@ -120,7 +113,24 @@ public class RegisterTenantCommandHandler(
             tenant.SchemaName);
 
         user.AddRefreshToken(refreshTokenStr, refreshTokenExpiry);
+
+        if (isNewUser)
+        {
+            await userRepository.AddAsync(user, cancellationToken);
+        }
+        else
+        {
+            userRepository.Update(user);
+        }
+
+        await tenantRepository.AddAsync(tenant, cancellationToken);
+        await membershipRepository.AddAsync(membership, cancellationToken);
+
+        // 6. Persist public metadata
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // 7. Provision dedicated PostgreSQL schema for tenant
+        await schemaProvisioner.ProvisionTenantSchemaAsync(tenant.SchemaName, cancellationToken);
 
         var response = new RegisterTenantResponseDto(
             tenant.Id,

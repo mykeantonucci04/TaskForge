@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TaskForge.Application.Features.Tenants;
 using TaskForge.Domain.Enums;
@@ -118,17 +117,7 @@ public class ApiIntegrationTests : IAsyncLifetime
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                builder.ConfigureTestServices(services =>
-                {
-                    var descriptor = services.SingleOrDefault(
-                        d => d.ServiceType == typeof(DbContextOptions<TaskForgeDbContext>));
-                    if (descriptor != null) services.Remove(descriptor);
-
-                    services.AddDbContext<TaskForgeDbContext>(options =>
-                    {
-                        options.UseNpgsql(_postgresContainer.GetConnectionString());
-                    });
-                });
+                builder.UseSetting("ConnectionStrings:DefaultConnection", _postgresContainer.GetConnectionString());
             });
     }
 
