@@ -3,40 +3,6 @@ using TaskForge.Domain.Enums;
 
 namespace TaskForge.Domain.Entities;
 
-public class Tenant : AggregateRoot<Guid>, IAuditableEntity
-{
-    public string Name { get; set; } = string.Empty;
-    public string SchemaName { get; set; } = string.Empty;
-    public string Identifier { get; set; } = string.Empty;
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedAtUtc { get; set; }
-    public string? CreatedBy { get; set; }
-    public DateTime? LastModifiedAtUtc { get; set; }
-    public string? LastModifiedBy { get; set; }
-
-    public ICollection<User> Users { get; set; } = new List<User>();
-    public ICollection<Workspace> Workspaces { get; set; } = new List<Workspace>();
-}
-
-public class User : AggregateRoot<Guid>, IAuditableEntity, ITenantEntity
-{
-    public Guid TenantId { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public UserRole Role { get; set; } = UserRole.Member;
-    public bool IsActive { get; set; } = true;
-    public string? RefreshToken { get; set; }
-    public DateTime? RefreshTokenExpiryUtc { get; set; }
-    public DateTime CreatedAtUtc { get; set; }
-    public string? CreatedBy { get; set; }
-    public DateTime? LastModifiedAtUtc { get; set; }
-    public string? LastModifiedBy { get; set; }
-
-    public string FullName => $"{FirstName} {LastName}".Trim();
-}
-
 public class Workspace : AggregateRoot<Guid>, IAuditableEntity, ITenantEntity
 {
     public Guid TenantId { get; set; }

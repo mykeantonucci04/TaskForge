@@ -70,6 +70,7 @@ make test
 
 ## Endpoints & Documentation
 
+- **Scalar API Documentation UI**: `http://localhost:8080/scalar/v1` (o `https://localhost:7001/scalar/v1` / `http://localhost:5000/scalar/v1` in base alla porta attiva)
 - **OpenAPI 3.1 Specification**: `http://localhost:8080/openapi/v1.json`
 - **Health Check**: `GET http://localhost:8080/health`
 
