@@ -84,7 +84,7 @@ public class InfrastructureIntegrationTests : IAsyncLifetime
         npgsqlConnString.Should().Contain($"Database={expectedDb}");
         npgsqlConnString.Should().Contain($"Username={expectedUsername}");
         npgsqlConnString.Should().Contain($"Password={expectedPassword}");
-        npgsqlConnString.Should().Contain("SSL Mode=Require");
-        npgsqlConnString.Should().Contain("Trust Server Certificate=true");
+        npgsqlConnString.Should().ContainEquivalentOf("SSL Mode=Require");
+        npgsqlConnString.Should().ContainEquivalentOf("Trust Server Certificate=true");
     }
 }
