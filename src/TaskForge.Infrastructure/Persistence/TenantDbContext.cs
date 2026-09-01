@@ -40,6 +40,13 @@ public class TenantDbContext : DbContext
             modelBuilder.HasDefaultSchema(_tenantContext.SchemaName);
         }
 
+        // Ignore public schema entities inside tenant-scoped DbContext
+        modelBuilder.Ignore<User>();
+        modelBuilder.Ignore<Tenant>();
+        modelBuilder.Ignore<TenantMembership>();
+        modelBuilder.Ignore<TenantInvitation>();
+        modelBuilder.Ignore<RefreshToken>();
+
         modelBuilder.Entity<Workspace>(builder =>
         {
             builder.ToTable("workspaces");
@@ -79,8 +86,8 @@ public class TenantDbContext : DbContext
             builder.ToTable("tasks");
             builder.HasKey(t => t.Id);
             builder.Property(t => t.Title).HasMaxLength(200).IsRequired();
+            builder.Ignore(t => t.Assignee);
             builder.HasOne(t => t.Column).WithMany(c => c.Tasks).HasForeignKey(t => t.ColumnId).OnDelete(DeleteBehavior.Cascade);
-            builder.HasOne(t => t.Assignee).WithMany().HasForeignKey(t => t.AssigneeId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Subtask>(builder =>
@@ -96,8 +103,8 @@ public class TenantDbContext : DbContext
             builder.ToTable("comments");
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Content).IsRequired();
+            builder.Ignore(c => c.Author);
             builder.HasOne(c => c.TaskItem).WithMany(t => t.Comments).HasForeignKey(c => c.TaskItemId).OnDelete(DeleteBehavior.Cascade);
-            builder.HasOne(c => c.Author).WithMany().HasForeignKey(c => c.AuthorId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Label>(builder =>
@@ -116,8 +123,8 @@ public class TenantDbContext : DbContext
             builder.Property(a => a.FileName).HasMaxLength(256).IsRequired();
             builder.Property(a => a.StoragePath).HasMaxLength(500).IsRequired();
             builder.Property(a => a.ContentType).HasMaxLength(100).IsRequired();
+            builder.Ignore(a => a.UploadedBy);
             builder.HasOne(a => a.TaskItem).WithMany(t => t.Attachments).HasForeignKey(a => a.TaskItemId).OnDelete(DeleteBehavior.Cascade);
-            builder.HasOne(a => a.UploadedBy).WithMany().HasForeignKey(a => a.UploadedById).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ActivityLog>(builder =>
@@ -126,7 +133,7 @@ public class TenantDbContext : DbContext
             builder.HasKey(a => a.Id);
             builder.Property(a => a.EntityName).HasMaxLength(100).IsRequired();
             builder.Property(a => a.EntityId).HasMaxLength(100).IsRequired();
-            builder.HasOne(a => a.User).WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+            builder.Ignore(a => a.User);
         });
 
         modelBuilder.Entity<Notification>(builder =>
@@ -134,7 +141,7 @@ public class TenantDbContext : DbContext
             builder.ToTable("notifications");
             builder.HasKey(n => n.Id);
             builder.Property(n => n.Title).HasMaxLength(200).IsRequired();
-            builder.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
+            builder.Ignore(n => n.User);
         });
 
         modelBuilder.Entity<Webhook>(builder =>

@@ -169,7 +169,6 @@ public class TaskRepository(TenantDbContext context) : TenantScopedRepository<Ta
     {
         return await DbSet
             .Include(t => t.Column)
-            .Include(t => t.Assignee)
             .Include(t => t.Subtasks)
             .Include(t => t.Comments)
             .Include(t => t.Attachments)
@@ -197,8 +196,17 @@ public class UnitOfWork(PublicDbContext publicContext, TenantDbContext? tenantCo
 {
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var publicChanges = await publicContext.SaveChangesAsync(cancellationToken);
-        var tenantChanges = tenantContext is not null ? await tenantContext.SaveChangesAsync(cancellationToken) : 0;
-        return publicChanges + tenantChanges;
+        var total = 0;
+        if (publicContext.ChangeTracker.HasChanges())
+        {
+            total += await publicContext.SaveChangesAsync(cancellationToken);
+        }
+
+        if (tenantContext is not null && tenantContext.ChangeTracker.HasChanges())
+        {
+            total += await tenantContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return total;
     }
 }
