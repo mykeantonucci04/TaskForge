@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskForge.Domain.Common;
 using TaskForge.Domain.Entities;
 using TaskForge.Domain.Enums;
+using TaskForge.Infrastructure.Extensions;
 using TaskForge.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -55,5 +56,35 @@ public class InfrastructureIntegrationTests : IAsyncLifetime
         fetched.Slug.Value.Should().Be("test-tenant");
         fetched.Plan.Should().Be(TenantPlan.Enterprise);
         fetched.SchemaName.Should().Be("tenant_test_tenant");
+    }
+
+    [Theory]
+    [InlineData(
+        "postgresql://neondb_owner:npg_password123@ep-sample-123.eu-central-1.aws.neon.tech/taskforge_db?sslmode=require",
+        "ep-sample-123.eu-central-1.aws.neon.tech",
+        "taskforge_db",
+        "neondb_owner",
+        "npg_password123")]
+    [InlineData(
+        "postgres://myuser:secret@custom-host.com:5433/mydb",
+        "custom-host.com",
+        "mydb",
+        "myuser",
+        "secret")]
+    public void ConvertPostgresUriToNpgsqlConnectionString_Should_Parse_Correctly(
+        string uri,
+        string expectedHost,
+        string expectedDb,
+        string expectedUsername,
+        string expectedPassword)
+    {
+        var npgsqlConnString = DatabaseConfigurationExtensions.ConvertPostgresUriToNpgsqlConnectionString(uri);
+
+        npgsqlConnString.Should().Contain($"Host={expectedHost}");
+        npgsqlConnString.Should().Contain($"Database={expectedDb}");
+        npgsqlConnString.Should().Contain($"Username={expectedUsername}");
+        npgsqlConnString.Should().Contain($"Password={expectedPassword}");
+        npgsqlConnString.Should().Contain("SSL Mode=Require");
+        npgsqlConnString.Should().Contain("Trust Server Certificate=true");
     }
 }
