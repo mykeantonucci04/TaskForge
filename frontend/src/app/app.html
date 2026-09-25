@@ -1,0 +1,35 @@
+<div class="under-construction-container">
+  <div class="card">
+    <div class="badge">🚀 Fase 3: Frontend in Sviluppo</div>
+    <h1 class="title">TaskForge</h1>
+    <p class="subtitle">
+      Piattaforma Enterprise Multi-Tenant di Gestione Progetti & Kanban Board.
+    </p>
+
+    <div class="status-box">
+      <div class="status-indicator">
+        <span class="dot"></span>
+        <span>Stato Deploy Frontend: <strong>Online su Vercel</strong></span>
+      </div>
+      <div class="api-check">
+        <p>API Backend (Render):</p>
+        <span class="api-badge" [class.healthy]="apiStatus() === 'Healthy'" [class.loading]="apiStatus() === 'Verifica in corso...'">
+          {{ apiStatus() }}
+        </span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" (click)="checkBackendHealth()">
+        🔄 Verifica Connessione Backend
+      </button>
+      <a class="btn btn-secondary" href="https://taskforge-api-phy5.onrender.com/scalar/v1" target="_blank" rel="noopener">
+        📖 Documentazione API (Scalar)
+      </a>
+    </div>
+
+    <footer class="footer">
+      <p>Sviluppato con Angular 21 & ASP.NET Core 10</p>
+    </footer>
+  </div>
+</div>
