@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using TaskForge.Domain.Common;
 using TaskForge.Domain.Entities;
+using TaskForge.Domain.Enums;
 
 namespace TaskForge.Domain.Interfaces;
 
@@ -48,6 +49,23 @@ public interface ITaskRepository : IRepository<TaskItem>
 {
     Task<TaskItem?> GetTaskWithDetailsAsync(Guid taskId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TaskItem>> GetTasksByColumnAsync(Guid columnId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TaskItem>> SearchTasksAsync(Guid? columnId, Guid? assigneeId, TaskPriority? priority, TaskItemStatus? status, Guid? labelId, CancellationToken cancellationToken = default);
+}
+
+public interface ISubtaskRepository : IRepository<Subtask>
+{
+    Task<IReadOnlyList<Subtask>> GetSubtasksByTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default);
+}
+
+public interface ICommentRepository : IRepository<Comment>
+{
+    Task<IReadOnlyList<Comment>> GetCommentsByTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default);
+}
+
+public interface ILabelRepository : IRepository<Label>
+{
+    Task<IReadOnlyList<Label>> GetLabelsByWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsByNameAsync(Guid workspaceId, string name, CancellationToken cancellationToken = default);
 }
 
 public interface IWorkspaceRepository : IRepository<Workspace>

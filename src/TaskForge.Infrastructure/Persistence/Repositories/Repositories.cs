@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using TaskForge.Domain.Common;
 using TaskForge.Domain.Entities;
+using TaskForge.Domain.Enums;
 using TaskForge.Domain.Interfaces;
 
 namespace TaskForge.Infrastructure.Persistence.Repositories;
@@ -171,6 +172,7 @@ public class TaskRepository(TenantDbContext context) : TenantScopedRepository<Ta
             .Include(t => t.Column)
             .Include(t => t.Subtasks)
             .Include(t => t.Comments)
+            .Include(t => t.Labels)
             .Include(t => t.Attachments)
             .FirstOrDefaultAsync(t => t.Id == taskId, cancellationToken);
     }
@@ -181,6 +183,72 @@ public class TaskRepository(TenantDbContext context) : TenantScopedRepository<Ta
             .Where(t => t.ColumnId == columnId)
             .OrderBy(t => t.Position)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TaskItem>> SearchTasksAsync(
+        Guid? columnId,
+        Guid? assigneeId,
+        TaskPriority? priority,
+        TaskItemStatus? status,
+        Guid? labelId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbSet.AsQueryable();
+
+        if (columnId.HasValue)
+            query = query.Where(t => t.ColumnId == columnId.Value);
+
+        if (assigneeId.HasValue)
+            query = query.Where(t => t.AssigneeId == assigneeId.Value);
+
+        if (priority.HasValue)
+            query = query.Where(t => t.Priority == priority.Value);
+
+        if (status.HasValue)
+            query = query.Where(t => t.Status == status.Value);
+
+        if (labelId.HasValue)
+            query = query.Where(t => t.Labels.Any(l => l.Id == labelId.Value));
+
+        return await query.OrderBy(t => t.Position).ToListAsync(cancellationToken);
+    }
+}
+
+public class SubtaskRepository(TenantDbContext context) : TenantScopedRepository<Subtask>(context), ISubtaskRepository
+{
+    public async Task<IReadOnlyList<Subtask>> GetSubtasksByTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(s => s.TaskItemId == taskItemId)
+            .ToListAsync(cancellationToken);
+    }
+}
+
+public class CommentRepository(TenantDbContext context) : TenantScopedRepository<Comment>(context), ICommentRepository
+{
+    public async Task<IReadOnlyList<Comment>> GetCommentsByTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(c => c.TaskItemId == taskItemId)
+            .OrderBy(c => c.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+}
+
+public class LabelRepository(TenantDbContext context) : TenantScopedRepository<Label>(context), ILabelRepository
+{
+    public async Task<IReadOnlyList<Label>> GetLabelsByWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(l => l.WorkspaceId == workspaceId)
+            .OrderBy(l => l.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> ExistsByNameAsync(Guid workspaceId, string name, CancellationToken cancellationToken = default)
+    {
+        var trimmedName = name.Trim().ToLowerInvariant();
+        return await DbSet.AnyAsync(l => l.WorkspaceId == workspaceId && l.Name.ToLower() == trimmedName, cancellationToken);
     }
 }
 

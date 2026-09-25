@@ -66,6 +66,9 @@ public static class DependencyInjection
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IBoardRepository, BoardRepository>();
         services.AddScoped<IBoardColumnRepository, BoardColumnRepository>();
+        services.AddScoped<ISubtaskRepository, SubtaskRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<ILabelRepository, LabelRepository>();
 
         // Infrastructure Services
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
