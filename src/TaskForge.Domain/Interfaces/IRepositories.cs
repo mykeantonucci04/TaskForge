@@ -55,6 +55,24 @@ public interface IWorkspaceRepository : IRepository<Workspace>
     Task<Workspace?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
 }
 
+public interface IProjectRepository : IRepository<Project>
+{
+    Task<Project?> GetByIdWithBoardsAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Project>> GetProjectsByWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsByKeyAsync(Guid workspaceId, string key, CancellationToken cancellationToken = default);
+}
+
+public interface IBoardRepository : IRepository<Board>
+{
+    Task<Board?> GetBoardWithColumnsAndTasksAsync(Guid boardId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Board>> GetBoardsByProjectAsync(Guid projectId, CancellationToken cancellationToken = default);
+}
+
+public interface IBoardColumnRepository : IRepository<BoardColumn>
+{
+    Task<IReadOnlyList<BoardColumn>> GetColumnsByBoardAsync(Guid boardId, CancellationToken cancellationToken = default);
+}
+
 public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

@@ -63,6 +63,9 @@ public static class DependencyInjection
         services.AddScoped<ITenantMembershipRepository, TenantMembershipRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
+        services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<IBoardRepository, BoardRepository>();
+        services.AddScoped<IBoardColumnRepository, BoardColumnRepository>();
 
         // Infrastructure Services
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();

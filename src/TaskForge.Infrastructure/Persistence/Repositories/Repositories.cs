@@ -192,6 +192,60 @@ public class WorkspaceRepository(TenantDbContext context) : TenantScopedReposito
     }
 }
 
+public class ProjectRepository(TenantDbContext context) : TenantScopedRepository<Project>(context), IProjectRepository
+{
+    public async Task<Project?> GetByIdWithBoardsAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(p => p.Boards)
+            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Project>> GetProjectsByWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(p => p.WorkspaceId == workspaceId)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> ExistsByKeyAsync(Guid workspaceId, string key, CancellationToken cancellationToken = default)
+    {
+        var upperKey = key.Trim().ToUpperInvariant();
+        return await DbSet.AnyAsync(p => p.WorkspaceId == workspaceId && p.Key == upperKey, cancellationToken);
+    }
+}
+
+public class BoardRepository(TenantDbContext context) : TenantScopedRepository<Board>(context), IBoardRepository
+{
+    public async Task<Board?> GetBoardWithColumnsAndTasksAsync(Guid boardId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(b => b.Columns.OrderBy(c => c.Order))
+                .ThenInclude(c => c.Tasks.OrderBy(t => t.Position))
+            .FirstOrDefaultAsync(b => b.Id == boardId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Board>> GetBoardsByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(b => b.ProjectId == projectId)
+            .OrderByDescending(b => b.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+}
+
+public class BoardColumnRepository(TenantDbContext context) : TenantScopedRepository<BoardColumn>(context), IBoardColumnRepository
+{
+    public async Task<IReadOnlyList<BoardColumn>> GetColumnsByBoardAsync(Guid boardId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(c => c.BoardId == boardId)
+            .OrderBy(c => c.Order)
+            .ToListAsync(cancellationToken);
+    }
+}
+
 public class UnitOfWork(PublicDbContext publicContext, TenantDbContext? tenantContext = null) : IUnitOfWork
 {
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -1,8 +1,11 @@
 using MediatR;
 using TaskForge.Application.Features.Auth;
+using TaskForge.Application.Features.Boards;
+using TaskForge.Application.Features.Projects;
 using TaskForge.Application.Features.Tasks;
 using TaskForge.Application.Features.Tenants;
 using TaskForge.Application.Features.Workspaces;
+using TaskForge.Domain.Enums;
 using TaskForge.Shared.Results;
 
 namespace TaskForge.Api.Endpoints;
@@ -63,6 +66,82 @@ public static class EndpointsExtensions
             return ToHttpResponse(result);
         }).WithName("GetWorkspaces");
 
+        workspaces.MapPost("/{workspaceId:guid}/projects", async (Guid workspaceId, CreateProjectRequest request, ISender sender) =>
+        {
+            var command = new CreateProjectCommand(workspaceId, request.Name, request.Key, request.Description);
+            var result = await sender.Send(command);
+            return ToCreatedHttpResponse(result, res => $"/api/v1/projects/{res.Id}");
+        }).WithName("CreateProjectInWorkspace");
+
+        workspaces.MapGet("/{workspaceId:guid}/projects", async (Guid workspaceId, ISender sender) =>
+        {
+            var result = await sender.Send(new GetProjectsByWorkspaceQuery(workspaceId));
+            return ToHttpResponse(result);
+        }).WithName("GetProjectsByWorkspace");
+
+        // Project Endpoints
+        var projects = apiGroup.MapGroup("/projects").WithTags("Projects").RequireAuthorization();
+        projects.MapGet("/{id:guid}", async (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new GetProjectByIdQuery(id));
+            return ToHttpResponse(result);
+        }).WithName("GetProjectById");
+
+        projects.MapPut("/{id:guid}", async (Guid id, UpdateProjectRequest request, ISender sender) =>
+        {
+            var command = new UpdateProjectCommand(id, request.Name, request.Description);
+            var result = await sender.Send(command);
+            return ToHttpResponse(result);
+        }).WithName("UpdateProject");
+
+        projects.MapDelete("/{id:guid}", async (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new DeleteProjectCommand(id));
+            return ToHttpResponse(result);
+        }).WithName("DeleteProject");
+
+        projects.MapPost("/{projectId:guid}/boards", async (Guid projectId, CreateBoardRequest request, ISender sender) =>
+        {
+            var command = new CreateBoardCommand(projectId, request.Name, request.CreateDefaultColumns);
+            var result = await sender.Send(command);
+            return ToCreatedHttpResponse(result, res => $"/api/v1/boards/{res.Id}");
+        }).WithName("CreateBoardInProject");
+
+        projects.MapGet("/{projectId:guid}/boards", async (Guid projectId, ISender sender) =>
+        {
+            var result = await sender.Send(new GetBoardsByProjectQuery(projectId));
+            return ToHttpResponse(result);
+        }).WithName("GetBoardsByProject");
+
+        // Board & Column Endpoints
+        var boards = apiGroup.MapGroup("/boards").WithTags("Boards").RequireAuthorization();
+        boards.MapGet("/{id:guid}", async (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new GetBoardWithColumnsAndTasksQuery(id));
+            return ToHttpResponse(result);
+        }).WithName("GetBoardDetails");
+
+        boards.MapPost("/{boardId:guid}/columns", async (Guid boardId, CreateBoardColumnRequest request, ISender sender) =>
+        {
+            var command = new CreateBoardColumnCommand(boardId, request.Name, request.TargetStatus);
+            var result = await sender.Send(command);
+            return ToHttpResponse(result);
+        }).WithName("CreateBoardColumn");
+
+        var columns = apiGroup.MapGroup("/columns").WithTags("Columns").RequireAuthorization();
+        columns.MapPut("/{id:guid}", async (Guid id, UpdateBoardColumnCommand command, ISender sender) =>
+        {
+            var commandWithId = command with { ColumnId = id };
+            var result = await sender.Send(commandWithId);
+            return ToHttpResponse(result);
+        }).WithName("UpdateBoardColumn");
+
+        columns.MapDelete("/{id:guid}", async (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new DeleteBoardColumnCommand(id));
+            return ToHttpResponse(result);
+        }).WithName("DeleteBoardColumn");
+
         // Task Endpoints
         var tasks = apiGroup.MapGroup("/tasks").WithTags("Tasks").RequireAuthorization();
         tasks.MapPost("/", async (CreateTaskCommand command, ISender sender) =>
@@ -121,3 +200,8 @@ public static class EndpointsExtensions
         };
     }
 }
+
+public record CreateProjectRequest(string Name, string Key, string? Description);
+public record UpdateProjectRequest(string Name, string? Description);
+public record CreateBoardRequest(string Name, bool CreateDefaultColumns = true);
+public record CreateBoardColumnRequest(string Name, TaskItemStatus TargetStatus = TaskItemStatus.Todo);
