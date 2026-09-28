@@ -303,12 +303,32 @@ public static class EndpointsExtensions
     {
         return error.Type switch
         {
-            ErrorType.NotFound => Microsoft.AspNetCore.Http.Results.NotFound(error),
-            ErrorType.Validation => Microsoft.AspNetCore.Http.Results.BadRequest(error),
-            ErrorType.Conflict => Microsoft.AspNetCore.Http.Results.Conflict(error),
-            ErrorType.Unauthorized => Microsoft.AspNetCore.Http.Results.Unauthorized(),
-            ErrorType.Forbidden => Microsoft.AspNetCore.Http.Results.Forbid(),
-            _ => Microsoft.AspNetCore.Http.Results.BadRequest(error)
+            ErrorType.NotFound => Microsoft.AspNetCore.Http.Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Not Found",
+                detail: error.Description),
+            ErrorType.Validation => Microsoft.AspNetCore.Http.Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Validation Error",
+                detail: error.Description),
+            ErrorType.Conflict => Microsoft.AspNetCore.Http.Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Conflict",
+                detail: error.Description),
+            ErrorType.Unauthorized => Microsoft.AspNetCore.Http.Results.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Unauthorized",
+                detail: string.IsNullOrWhiteSpace(error.Description)
+                    ? "Credenziali non valide o email non registrata."
+                    : error.Description),
+            ErrorType.Forbidden => Microsoft.AspNetCore.Http.Results.Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Forbidden",
+                detail: error.Description),
+            _ => Microsoft.AspNetCore.Http.Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Bad Request",
+                detail: error.Description)
         };
     }
 }
