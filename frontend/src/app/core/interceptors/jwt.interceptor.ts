@@ -25,7 +25,8 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(clonedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
+      const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/register-tenant');
+      if (error.status === 401 && !isAuthEndpoint) {
         authService.logout();
       }
       return throwError(() => error);

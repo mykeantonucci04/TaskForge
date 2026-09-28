@@ -192,7 +192,14 @@ export class LoginComponent {
       },
       error: (err) => {
         this.isLoading.set(false);
-        const msg = err.error?.detail || err.error?.message || 'Credenziali non valide o errore di connessione.';
+        let msg = 'Credenziali non valide o errore di connessione.';
+        if (err.status === 401) {
+          msg = err.error?.detail || err.error?.message || 'Credenziali non valide o email non registrata.';
+        } else if (err.error?.detail) {
+          msg = err.error.detail;
+        } else if (err.error?.message) {
+          msg = err.error.message;
+        }
         this.errorMessage.set(msg);
       }
     });
