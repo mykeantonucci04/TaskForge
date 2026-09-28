@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { WorkspaceService } from '../services/workspace.service';
 
 @Component({
   selector: 'app-shell',
@@ -12,10 +13,10 @@ import { AuthService } from '../services/auth.service';
       <!-- Top Navigation Bar -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="brand-logo">
+          <a routerLink="/dashboard" class="brand-logo">
             <span class="logo-icon">TF</span>
             <span class="logo-title">TaskForge</span>
-          </div>
+          </a>
 
           <div class="tenant-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -24,6 +25,13 @@ import { AuthService } from '../services/auth.service';
             </svg>
             <span class="tenant-name">{{ authService.currentUser()?.tenantName || 'Tenant Aziendale' }}</span>
           </div>
+
+          @if (workspaceService.selectedWorkspace()) {
+            <a [routerLink]="['/workspaces', workspaceService.selectedWorkspace()?.id]" class="workspace-pill" title="Workspace Corrente">
+              <span class="ws-dot"></span>
+              <span class="ws-name">{{ workspaceService.selectedWorkspace()?.name }}</span>
+            </a>
+          }
         </div>
 
         <div class="topbar-right">
@@ -50,7 +58,7 @@ import { AuthService } from '../services/auth.service';
         <aside class="sidebar">
           <nav class="nav-menu">
             <div class="nav-section-title">NAVIGAZIONE</div>
-            <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+            <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
@@ -60,28 +68,16 @@ import { AuthService } from '../services/auth.service';
               <span>Dashboard</span>
             </a>
 
-            <div class="nav-section-title">PROSSIMI SPRINT</div>
-            <span class="nav-item disabled" title="Disponibile in Sprint 2">
+            <a routerLink="/workspaces" routerLinkActive="active" class="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
               <span>Workspaces & Progetti</span>
-              <span class="badge-mini">Sprint 2</span>
-            </span>
-
-            <span class="nav-item disabled" title="Disponibile in Sprint 3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-                <line x1="15" y1="3" x2="15" y2="21"></line>
-              </svg>
-              <span>Kanban Boards</span>
-              <span class="badge-mini">Sprint 3</span>
-            </span>
+            </a>
           </nav>
 
           <div class="sidebar-footer">
-            <span class="build-info">TaskForge v1.0.0</span>
+            <span class="build-info">TaskForge Enterprise</span>
           </div>
         </aside>
 
@@ -121,6 +117,7 @@ import { AuthService } from '../services/auth.service';
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      text-decoration: none;
     }
 
     .logo-icon {
@@ -154,6 +151,32 @@ import { AuthService } from '../services/auth.service';
       font-size: 0.8125rem;
       color: var(--text-secondary);
       font-weight: 500;
+    }
+
+    .workspace-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.65rem;
+      background-color: var(--color-primary-light);
+      border: 1px solid var(--color-primary-border);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      color: var(--color-primary);
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .workspace-pill:hover {
+      opacity: 0.85;
+    }
+
+    .ws-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--color-primary);
+      border-radius: 50%;
     }
 
     .topbar-right {
@@ -228,7 +251,7 @@ import { AuthService } from '../services/auth.service';
       margin-bottom: 0.15rem;
     }
 
-    .nav-item:hover:not(.disabled) {
+    .nav-item:hover {
       background-color: var(--bg-subtle);
       color: var(--text-main);
     }
@@ -237,22 +260,6 @@ import { AuthService } from '../services/auth.service';
       background-color: var(--color-primary-light);
       color: var(--color-primary);
       font-weight: 600;
-    }
-
-    .nav-item.disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .badge-mini {
-      margin-left: auto;
-      font-size: 0.65rem;
-      font-weight: 600;
-      padding: 0.1rem 0.35rem;
-      border-radius: var(--radius-sm);
-      background-color: var(--bg-subtle);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
     }
 
     .sidebar-footer {
@@ -271,6 +278,7 @@ import { AuthService } from '../services/auth.service';
 })
 export class AppShellComponent {
   readonly authService = inject(AuthService);
+  readonly workspaceService = inject(WorkspaceService);
 
   onLogout(): void {
     this.authService.logout();

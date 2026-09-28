@@ -24,11 +24,27 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard'
+        redirectTo: 'workspaces'
       },
       {
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'workspaces',
+        loadComponent: () => import('./features/workspace/workspace-list/workspace-list.component').then(m => m.WorkspaceListComponent)
+      },
+      {
+        path: 'workspaces/:workspaceId',
+        loadComponent: () => import('./features/workspace/workspace-detail/workspace-detail.component').then(m => m.WorkspaceDetailComponent)
+      },
+      {
+        path: 'projects/:projectId',
+        loadComponent: () => import('./features/project/project-detail/project-detail.component').then(m => m.ProjectDetailComponent)
+      },
+      {
+        path: 'boards/:boardId',
+        loadComponent: () => import('./features/kanban/kanban-board.component').then(m => m.KanbanBoardComponent)
       }
     ]
   },
