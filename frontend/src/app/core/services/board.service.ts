@@ -2,7 +2,14 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BoardDetailDto, BoardColumnDto, CreateBoardColumnRequest } from '../models/board.models';
+import {
+  BoardDetailDto,
+  BoardColumnDto,
+  BoardDto,
+  CreateBoardRequest,
+  CreateBoardColumnRequest,
+  ReorderColumnsRequest
+} from '../models/board.models';
 
 @Injectable({
   providedIn: 'root'
@@ -19,12 +26,23 @@ export class BoardService {
     return this.http.get<BoardDetailDto>(`${this.apiBase}/boards/${boardId}`).pipe(
       tap({
         next: (detail) => {
+          if (detail?.columns) {
+            detail.columns.sort((a, b) => a.order - b.order);
+          }
           this.currentBoard.set(detail);
           this.isLoading.set(false);
         },
         error: () => this.isLoading.set(false)
       })
     );
+  }
+
+  getBoardsByProject(projectId: string): Observable<BoardDto[]> {
+    return this.http.get<BoardDto[]>(`${this.apiBase}/projects/${projectId}/boards`);
+  }
+
+  createBoard(projectId: string, request: CreateBoardRequest): Observable<BoardDto> {
+    return this.http.post<BoardDto>(`${this.apiBase}/projects/${projectId}/boards`, request);
   }
 
   createColumn(boardId: string, request: CreateBoardColumnRequest): Observable<BoardColumnDto> {
@@ -44,7 +62,29 @@ export class BoardService {
                 targetStatus: newCol.targetStatus,
                 tasks: []
               }
-            ]
+            ].sort((a, b) => a.order - b.order)
+          });
+        }
+      })
+    );
+  }
+
+  reorderColumns(boardId: string, request: ReorderColumnsRequest): Observable<boolean> {
+    return this.http.put<boolean>(`${this.apiBase}/boards/${boardId}/columns/reorder`, request).pipe(
+      tap(() => {
+        const board = this.currentBoard();
+        if (board && board.id === boardId) {
+          const orderMap = new Map(request.columns.map(c => [c.columnId, c.order]));
+          const updatedColumns = board.columns
+            .map(col => {
+              const newOrder = orderMap.get(col.id);
+              return newOrder !== undefined ? { ...col, order: newOrder } : col;
+            })
+            .sort((a, b) => a.order - b.order);
+
+          this.currentBoard.set({
+            ...board,
+            columns: updatedColumns
           });
         }
       })
@@ -65,3 +105,4 @@ export class BoardService {
     );
   }
 }
+

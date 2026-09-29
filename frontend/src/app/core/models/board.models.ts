@@ -51,3 +51,12 @@ export interface CreateBoardColumnRequest {
   name: string;
   targetStatus?: TaskItemStatus;
 }
+
+export interface ColumnOrderDto {
+  columnId: string;
+  order: number;
+}
+
+export interface ReorderColumnsRequest {
+  columns: ColumnOrderDto[];
+}

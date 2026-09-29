@@ -58,6 +58,10 @@ public record UpdateBoardColumnCommand(
 
 public record DeleteBoardColumnCommand(Guid ColumnId) : ICommand<bool>;
 
+public record ColumnOrderDto(Guid ColumnId, int Order);
+
+public record ReorderBoardColumnsCommand(Guid BoardId, IReadOnlyList<ColumnOrderDto> Columns) : ICommand<bool>;
+
 public record GetBoardsByProjectQuery(Guid ProjectId) : IQuery<IReadOnlyList<BoardDto>>;
 
 public record GetBoardWithColumnsAndTasksQuery(Guid BoardId) : IQuery<BoardDetailDto>;
@@ -120,6 +124,27 @@ public class UpdateBoardColumnCommandValidator : AbstractValidator<UpdateBoardCo
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Order).GreaterThanOrEqualTo(0);
         RuleFor(x => x.TargetStatus).IsInEnum();
+    }
+}
+
+public class ReorderBoardColumnsCommandValidator : AbstractValidator<ReorderBoardColumnsCommand>
+{
+    public ReorderBoardColumnsCommandValidator()
+    {
+        RuleFor(x => x.BoardId).NotEmpty();
+        RuleFor(x => x.Columns).NotEmpty();
+
+        RuleForEach(x => x.Columns).ChildRules(column =>
+        {
+            column.RuleFor(c => c.ColumnId).NotEmpty();
+            column.RuleFor(c => c.Order).GreaterThanOrEqualTo(0);
+        });
+
+        RuleFor(x => x.Columns)
+            .Must(columns => columns == null || columns.Select(c => c.ColumnId).Distinct().Count() == columns.Count)
+            .WithMessage("Column IDs must be unique.")
+            .Must(columns => columns == null || columns.Select(c => c.Order).Distinct().Count() == columns.Count)
+            .WithMessage("Column orders must be unique.");
     }
 }
 
@@ -302,3 +327,46 @@ public class DeleteBoardColumnCommandHandler(
         return Result.Success(true);
     }
 }
+
+public class ReorderBoardColumnsCommandHandler(
+    IBoardRepository boardRepository,
+    IBoardColumnRepository columnRepository,
+    ICurrentTenantService tenantService,
+    IUnitOfWork unitOfWork) : ICommandHandler<ReorderBoardColumnsCommand, bool>
+{
+    public async Task<Result<bool>> Handle(ReorderBoardColumnsCommand request, CancellationToken cancellationToken)
+    {
+        if (!tenantService.TenantId.HasValue)
+        {
+            return Result.Failure<bool>(
+                Error.Validation("Tenant.Required", "Tenant context is required to reorder columns."));
+        }
+
+        var board = await boardRepository.GetByIdAsync(request.BoardId, cancellationToken);
+        if (board is null || (board.TenantId != Guid.Empty && board.TenantId != tenantService.TenantId.Value))
+        {
+            return Result.Failure<bool>(
+                Error.NotFound("Board.NotFound", $"Board with ID '{request.BoardId}' was not found."));
+        }
+
+        var existingColumns = await columnRepository.GetColumnsByBoardAsync(request.BoardId, cancellationToken);
+        var existingColumnMap = existingColumns.ToDictionary(c => c.Id);
+
+        foreach (var colOrder in request.Columns)
+        {
+            if (!existingColumnMap.TryGetValue(colOrder.ColumnId, out var column))
+            {
+                return Result.Failure<bool>(
+                    Error.NotFound("Column.NotFound", $"Column with ID '{colOrder.ColumnId}' does not belong to board '{request.BoardId}'."));
+            }
+
+            column.Order = colOrder.Order;
+            columnRepository.Update(column);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(true);
+    }
+}
+

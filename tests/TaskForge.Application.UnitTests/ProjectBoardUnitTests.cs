@@ -220,4 +220,235 @@ public class ProjectBoardUnitTests
             Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task ReorderBoardColumnsCommandHandler_Should_Reorder_Columns_Successfully()
+    {
+        // Arrange
+        var boardId = Guid.NewGuid();
+        var col1Id = Guid.NewGuid();
+        var col2Id = Guid.NewGuid();
+        var col3Id = Guid.NewGuid();
+
+        var col1 = new BoardColumn { Id = col1Id, BoardId = boardId, Name = "Todo", Order = 0 };
+        var col2 = new BoardColumn { Id = col2Id, BoardId = boardId, Name = "In Progress", Order = 1 };
+        var col3 = new BoardColumn { Id = col3Id, BoardId = boardId, Name = "Done", Order = 2 };
+
+        var existingColumns = new List<BoardColumn> { col1, col2, col3 };
+
+        var tenantId = _tenantService.TenantId!.Value;
+        _boardRepository.GetByIdAsync(boardId, Arg.Any<CancellationToken>())
+            .Returns(new Board { Id = boardId, TenantId = tenantId, Name = "Test Board" });
+
+        _columnRepository.GetColumnsByBoardAsync(boardId, Arg.Any<CancellationToken>())
+            .Returns(existingColumns);
+
+        var handler = new ReorderBoardColumnsCommandHandler(_boardRepository, _columnRepository, _tenantService, _unitOfWork);
+        var command = new ReorderBoardColumnsCommand(boardId, new List<ColumnOrderDto>
+        {
+            new(col1Id, 2),
+            new(col2Id, 0),
+            new(col3Id, 1)
+        });
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeTrue();
+        col1.Order.Should().Be(2);
+        col2.Order.Should().Be(0);
+        col3.Order.Should().Be(1);
+
+        _columnRepository.Received(1).Update(col1);
+        _columnRepository.Received(1).Update(col2);
+        _columnRepository.Received(1).Update(col3);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReorderBoardColumnsCommandHandler_Should_Return_NotFound_When_Board_Does_Not_Exist()
+    {
+        // Arrange
+        var boardId = Guid.NewGuid();
+        _boardRepository.GetByIdAsync(boardId, Arg.Any<CancellationToken>())
+            .Returns((Board?)null);
+
+        var handler = new ReorderBoardColumnsCommandHandler(_boardRepository, _columnRepository, _tenantService, _unitOfWork);
+        var command = new ReorderBoardColumnsCommand(boardId, new List<ColumnOrderDto>
+        {
+            new(Guid.NewGuid(), 0)
+        });
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Board.NotFound");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReorderBoardColumnsCommandHandler_Should_Return_NotFound_When_Column_Does_Not_Belong_To_Board()
+    {
+        // Arrange
+        var boardId = Guid.NewGuid();
+        var existingColId = Guid.NewGuid();
+        var foreignColId = Guid.NewGuid();
+
+        var existingCol = new BoardColumn { Id = existingColId, BoardId = boardId, Name = "Todo", Order = 0 };
+
+        var tenantId = _tenantService.TenantId!.Value;
+        _boardRepository.GetByIdAsync(boardId, Arg.Any<CancellationToken>())
+            .Returns(new Board { Id = boardId, TenantId = tenantId, Name = "Test Board" });
+
+        _columnRepository.GetColumnsByBoardAsync(boardId, Arg.Any<CancellationToken>())
+            .Returns(new List<BoardColumn> { existingCol });
+
+        var handler = new ReorderBoardColumnsCommandHandler(_boardRepository, _columnRepository, _tenantService, _unitOfWork);
+        var command = new ReorderBoardColumnsCommand(boardId, new List<ColumnOrderDto>
+        {
+            new(existingColId, 0),
+            new(foreignColId, 1)
+        });
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Column.NotFound");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReorderBoardColumnsCommandHandler_Should_Return_Validation_Error_When_Tenant_Context_Missing()
+    {
+        // Arrange
+        _tenantService.TenantId.Returns((Guid?)null);
+        var handler = new ReorderBoardColumnsCommandHandler(_boardRepository, _columnRepository, _tenantService, _unitOfWork);
+        var command = new ReorderBoardColumnsCommand(Guid.NewGuid(), new List<ColumnOrderDto>
+        {
+            new(Guid.NewGuid(), 0)
+        });
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Tenant.Required");
+    }
+
+    [Fact]
+    public void ReorderBoardColumnsCommandValidator_Should_Pass_When_Command_Is_Valid()
+    {
+        // Arrange
+        var validator = new ReorderBoardColumnsCommandValidator();
+        var command = new ReorderBoardColumnsCommand(Guid.NewGuid(), new List<ColumnOrderDto>
+        {
+            new(Guid.NewGuid(), 0),
+            new(Guid.NewGuid(), 1),
+            new(Guid.NewGuid(), 2)
+        });
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ReorderBoardColumnsCommandValidator_Should_Fail_When_BoardId_Is_Empty()
+    {
+        // Arrange
+        var validator = new ReorderBoardColumnsCommandValidator();
+        var command = new ReorderBoardColumnsCommand(Guid.Empty, new List<ColumnOrderDto>
+        {
+            new(Guid.NewGuid(), 0)
+        });
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(ReorderBoardColumnsCommand.BoardId));
+    }
+
+    [Fact]
+    public void ReorderBoardColumnsCommandValidator_Should_Fail_When_Columns_Is_Empty()
+    {
+        // Arrange
+        var validator = new ReorderBoardColumnsCommandValidator();
+        var command = new ReorderBoardColumnsCommand(Guid.NewGuid(), Array.Empty<ColumnOrderDto>());
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(ReorderBoardColumnsCommand.Columns));
+    }
+
+    [Fact]
+    public void ReorderBoardColumnsCommandValidator_Should_Fail_When_Column_Has_Empty_Id_Or_Negative_Order()
+    {
+        // Arrange
+        var validator = new ReorderBoardColumnsCommandValidator();
+        var command = new ReorderBoardColumnsCommand(Guid.NewGuid(), new List<ColumnOrderDto>
+        {
+            new(Guid.Empty, -1)
+        });
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName.EndsWith(nameof(ColumnOrderDto.ColumnId)));
+        result.Errors.Should().Contain(e => e.PropertyName.EndsWith(nameof(ColumnOrderDto.Order)));
+    }
+
+    [Fact]
+    public void ReorderBoardColumnsCommandValidator_Should_Fail_When_ColumnIds_Have_Duplicates()
+    {
+        // Arrange
+        var validator = new ReorderBoardColumnsCommandValidator();
+        var duplicateColId = Guid.NewGuid();
+        var command = new ReorderBoardColumnsCommand(Guid.NewGuid(), new List<ColumnOrderDto>
+        {
+            new(duplicateColId, 0),
+            new(duplicateColId, 1)
+        });
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("unique", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ReorderBoardColumnsCommandValidator_Should_Fail_When_Orders_Have_Duplicates()
+    {
+        // Arrange
+        var validator = new ReorderBoardColumnsCommandValidator();
+        var command = new ReorderBoardColumnsCommand(Guid.NewGuid(), new List<ColumnOrderDto>
+        {
+            new(Guid.NewGuid(), 0),
+            new(Guid.NewGuid(), 0)
+        });
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("unique", StringComparison.OrdinalIgnoreCase));
+    }
 }
