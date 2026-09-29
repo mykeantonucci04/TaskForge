@@ -28,4 +28,28 @@ public class PublicDbContext : DbContext
         modelBuilder.ApplyConfiguration(new TenantInvitationConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
     }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        EnsureRefreshTokensAreAdded();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        EnsureRefreshTokensAreAdded();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void EnsureRefreshTokensAreAdded()
+    {
+        foreach (var entry in ChangeTracker.Entries<RefreshToken>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+    }
 }
+
