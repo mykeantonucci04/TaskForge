@@ -50,8 +50,7 @@ public class RefreshToken : Entity<Guid>
             throw new DomainException("Expiration time must be in the future.");
         }
 
-        var tokenId = Guid.NewGuid();
-        return new RefreshToken(tokenId, userId, token, expiresAtUtc, createdByIp);
+        return new RefreshToken(Guid.Empty, userId, token, expiresAtUtc, createdByIp);
     }
 
     public void Revoke(string? revokedByIp = null, string? replacedByToken = null)
