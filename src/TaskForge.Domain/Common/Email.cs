@@ -40,6 +40,26 @@ public sealed record Email
         return new Email(trimmedEmail);
     }
 
+    public static bool TryCreate(string? email, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Email? result)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            result = null;
+            return false;
+        }
+
+        var trimmedEmail = email.Trim().ToLowerInvariant();
+
+        if (trimmedEmail.Length > MaxLength || !EmailRegex.IsMatch(trimmedEmail))
+        {
+            result = null;
+            return false;
+        }
+
+        result = new Email(trimmedEmail);
+        return true;
+    }
+
     public override string ToString() => Value;
 
     public static implicit operator string(Email email) => email.Value;

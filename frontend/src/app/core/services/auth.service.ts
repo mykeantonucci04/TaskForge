@@ -30,9 +30,39 @@ export class AuthService {
   }
 
   registerTenant(request: RegisterTenantRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/register-tenant`, request).pipe(
+    const payload: RegisterTenantRequest = {
+      ...request,
+      adminFirstName: request.adminFirstName || request.firstName || 'Admin',
+      adminLastName: request.adminLastName || request.lastName || 'Admin',
+      slug: request.slug || this.deriveSlug(request.companyName)
+    };
+    return this.http.post<AuthResponse>(`${this.baseUrl}/register-tenant`, payload).pipe(
       tap(response => this.handleAuthSuccess(response))
     );
+  }
+
+  deriveSlug(name: string): string {
+    if (!name) return 'workspace';
+    let slug = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (!slug) {
+      slug = 'workspace';
+    }
+    if (slug.length < 3) {
+      slug = `${slug}-org`;
+    }
+    if (slug.length > 50) {
+      slug = slug.substring(0, 50).replace(/-+$/, '');
+      if (slug.length < 3) {
+        slug = `${slug}-org`.slice(0, 50);
+      }
+    }
+    return slug;
   }
 
   logout(): void {
@@ -47,14 +77,16 @@ export class AuthService {
   }
 
   private handleAuthSuccess(res: AuthResponse): void {
-    const token = res.token;
-    const userId = res.userId || res.adminUserId || '';
-    const email = res.email || res.adminEmail || '';
-    const fullName = res.firstName && res.lastName
-      ? `${res.firstName} ${res.lastName}`
-      : (res.tenantName ? `Admin (${res.tenantName})` : email);
-    const tenantId = res.tenantId;
-    const tenantName = res.tenantName || 'Workspace';
+    const token = res.accessToken || res.token || '';
+    const userId = res.user?.id || res.adminUserId || res.userId || '';
+    const email = res.user?.email || res.adminEmail || res.email || '';
+    const fullName = res.user?.fullName
+      || (res.firstName && res.lastName ? `${res.firstName} ${res.lastName}` : null)
+      || res.adminFullName
+      || (res.companyName ? `Admin (${res.companyName})` : null)
+      || (res.tenantName ? `Admin (${res.tenantName})` : email);
+    const tenantId = res.user?.tenantId || res.tenantId || '';
+    const tenantName = res.companyName || res.tenantName || res.user?.schemaName || 'Workspace';
 
     const user: CurrentUser = {
       id: userId,
@@ -64,7 +96,9 @@ export class AuthService {
       tenantName
     };
 
-    localStorage.setItem(TOKEN_KEY, token);
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     this.currentUser.set(user);
   }

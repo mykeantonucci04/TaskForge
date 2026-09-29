@@ -12,10 +12,10 @@ namespace TaskForge.Application.Features.Tenants;
 public record RegisterTenantCommand(
     string CompanyName,
     string Slug,
-    string AdminFirstName,
-    string AdminLastName,
-    string AdminEmail,
-    string AdminPassword,
+    string AdminFirstName = "Admin",
+    string AdminLastName = "Admin",
+    string AdminEmail = "",
+    string AdminPassword = "",
     TenantPlan Plan = TenantPlan.Free) : ICommand<RegisterTenantResponseDto>;
 
 public record RegisterTenantResponseDto(
@@ -48,11 +48,9 @@ public class RegisterTenantCommandValidator : AbstractValidator<RegisterTenantCo
             .WithMessage("Tenant slug can only contain lowercase letters, numbers, and non-consecutive hyphens.");
 
         RuleFor(x => x.AdminFirstName)
-            .NotEmpty().WithMessage("Admin first name is required.")
             .MaximumLength(100).WithMessage("Admin first name cannot exceed 100 characters.");
 
         RuleFor(x => x.AdminLastName)
-            .NotEmpty().WithMessage("Admin last name is required.")
             .MaximumLength(100).WithMessage("Admin last name cannot exceed 100 characters.");
 
         RuleFor(x => x.AdminEmail)
@@ -62,7 +60,11 @@ public class RegisterTenantCommandValidator : AbstractValidator<RegisterTenantCo
 
         RuleFor(x => x.AdminPassword)
             .NotEmpty().WithMessage("Admin password is required.")
-            .MinimumLength(8).WithMessage("Admin password must be at least 8 characters.");
+            .MinimumLength(8).WithMessage("Admin password must be at least 8 characters.")
+            .Matches(@"[A-Z]").WithMessage("Password must contain at least one uppercase letter.")
+            .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter.")
+            .Matches(@"[0-9]").WithMessage("Password must contain at least one digit.")
+            .Matches(@"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]").WithMessage("Password must contain at least one special character.");
     }
 }
 
@@ -95,7 +97,9 @@ public class RegisterTenantCommandHandler(
         {
             isNewUser = true;
             var passwordHash = passwordHasher.HashPassword(request.AdminPassword);
-            user = User.Create(emailVo, passwordHash, request.AdminFirstName, request.AdminLastName);
+            var adminFirstName = string.IsNullOrWhiteSpace(request.AdminFirstName) ? "Admin" : request.AdminFirstName.Trim();
+            var adminLastName = string.IsNullOrWhiteSpace(request.AdminLastName) ? "Admin" : request.AdminLastName.Trim();
+            user = User.Create(emailVo, passwordHash, adminFirstName, adminLastName);
         }
 
         // 3. Create Tenant

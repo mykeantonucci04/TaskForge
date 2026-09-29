@@ -44,19 +44,24 @@ public class LoginCommandHandler(
 {
     public async Task<Result<AuthResponseDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        var emailVo = Email.Create(request.Email);
+        if (!Email.TryCreate(request.Email, out var emailVo) || emailVo is null)
+        {
+            return Result.Failure<AuthResponseDto>(
+                Error.Unauthorized("Auth.InvalidCredentials", "Credenziali non valide o email non registrata."));
+        }
+
         var user = await userRepository.GetByEmailAsync(emailVo, cancellationToken);
 
         if (user is null || !user.IsActive)
         {
             return Result.Failure<AuthResponseDto>(
-                Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password."));
+                Error.Unauthorized("Auth.InvalidCredentials", "Credenziali non valide o email non registrata."));
         }
 
         if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             return Result.Failure<AuthResponseDto>(
-                Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password."));
+                Error.Unauthorized("Auth.InvalidCredentials", "Credenziali non valide o email non registrata."));
         }
 
         var memberships = await membershipRepository.GetMembershipsByUserAsync(user.Id, cancellationToken);

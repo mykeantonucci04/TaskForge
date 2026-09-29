@@ -1,8 +1,39 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { RegisterTenantRequest } from '../../../core/models/auth.models';
+
+export const strongPasswordValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const value = control.value;
+  if (!value) return null;
+
+  const hasMinLength = value.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(value);
+  const hasLowerCase = /[a-z]/.test(value);
+  const hasDigit = /[0-9]/.test(value);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
+
+  if (!(hasMinLength && hasUpperCase && hasLowerCase && hasDigit && hasSpecial)) {
+    return { strongPassword: true };
+  }
+  return null;
+};
+
+export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const password = control.get('adminPassword')?.value;
+  const confirmPassword = control.get('confirmPassword')?.value;
+  if (!password || !confirmPassword) return null;
+  return password === confirmPassword ? null : { passwordMismatch: true };
+};
 
 @Component({
   selector: 'app-register-tenant',
@@ -47,38 +78,6 @@ import { AuthService } from '../../../core/services/auth.service';
             }
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="firstName">Nome</label>
-              <input
-                id="firstName"
-                type="text"
-                class="form-input"
-                [class.is-invalid]="form.get('firstName')?.invalid && form.get('firstName')?.touched"
-                placeholder="Mario"
-                formControlName="firstName"
-              />
-              @if (form.get('firstName')?.invalid && form.get('firstName')?.touched) {
-                <span class="form-error">Campo obbligatorio.</span>
-              }
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="lastName">Cognome</label>
-              <input
-                id="lastName"
-                type="text"
-                class="form-input"
-                [class.is-invalid]="form.get('lastName')?.invalid && form.get('lastName')?.touched"
-                placeholder="Rossi"
-                formControlName="lastName"
-              />
-              @if (form.get('lastName')?.invalid && form.get('lastName')?.touched) {
-                <span class="form-error">Campo obbligatorio.</span>
-              }
-            </div>
-          </div>
-
           <div class="form-group">
             <label class="form-label" for="adminEmail">Email Amministratore</label>
             <input
@@ -96,16 +95,57 @@ import { AuthService } from '../../../core/services/auth.service';
 
           <div class="form-group">
             <label class="form-label" for="adminPassword">Password Amministratore</label>
-            <input
-              id="adminPassword"
-              type="password"
-              class="form-input"
-              [class.is-invalid]="form.get('adminPassword')?.invalid && form.get('adminPassword')?.touched"
-              placeholder="Almeno 8 caratteri"
-              formControlName="adminPassword"
-            />
+            <div class="password-input-group">
+              <input
+                id="adminPassword"
+                [type]="showPassword() ? 'text' : 'password'"
+                class="form-input"
+                [class.is-invalid]="form.get('adminPassword')?.invalid && form.get('adminPassword')?.touched"
+                placeholder="Almeno 8 caratteri complessi"
+                formControlName="adminPassword"
+              />
+              <button
+                type="button"
+                class="password-toggle-btn"
+                (click)="toggleShowPassword()"
+              >
+                {{ showPassword() ? 'Nascondi' : 'Mostra' }}
+              </button>
+            </div>
             @if (form.get('adminPassword')?.invalid && form.get('adminPassword')?.touched) {
-              <span class="form-error">La password deve contenere almeno 8 caratteri.</span>
+              @if (form.get('adminPassword')?.hasError('required')) {
+                <span class="form-error">La password è obbligatoria.</span>
+              } @else if (form.get('adminPassword')?.hasError('strongPassword')) {
+                <span class="form-error">La password deve contenere almeno 8 caratteri, una lettera maiuscola, una minuscola, un numero e un carattere speciale.</span>
+              }
+            }
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">Conferma Password</label>
+            <div class="password-input-group">
+              <input
+                id="confirmPassword"
+                [type]="showConfirmPassword() ? 'text' : 'password'"
+                class="form-input"
+                [class.is-invalid]="(form.get('confirmPassword')?.invalid || form.hasError('passwordMismatch')) && form.get('confirmPassword')?.touched"
+                placeholder="Ripeti la password"
+                formControlName="confirmPassword"
+              />
+              <button
+                type="button"
+                class="password-toggle-btn"
+                (click)="toggleShowConfirmPassword()"
+              >
+                {{ showConfirmPassword() ? 'Nascondi' : 'Mostra' }}
+              </button>
+            </div>
+            @if (form.get('confirmPassword')?.touched) {
+              @if (form.get('confirmPassword')?.hasError('required')) {
+                <span class="form-error">La conferma della password è obbligatoria.</span>
+              } @else if (form.hasError('passwordMismatch')) {
+                <span class="form-error">Le password non coincidono.</span>
+              }
             }
           </div>
 
@@ -190,10 +230,31 @@ import { AuthService } from '../../../core/services/auth.service';
       color: var(--text-secondary);
     }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
+    .password-input-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-input-group .form-input {
+      padding-right: 5.5rem;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 0.5rem;
+      background: none;
+      border: none;
+      color: var(--color-primary);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      line-height: 1;
+    }
+
+    .password-toggle-btn:hover {
+      text-decoration: underline;
     }
 
     .auth-footer {
@@ -223,14 +284,25 @@ export class RegisterTenantComponent {
 
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly showPassword = signal(false);
+  readonly showConfirmPassword = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     companyName: ['', [Validators.required, Validators.minLength(2)]],
-    firstName: ['', [Validators.required]],
-    lastName: ['', [Validators.required]],
     adminEmail: ['', [Validators.required, Validators.email]],
-    adminPassword: ['', [Validators.required, Validators.minLength(8)]]
+    adminPassword: ['', [Validators.required, strongPasswordValidator]],
+    confirmPassword: ['', [Validators.required]]
+  }, {
+    validators: [passwordMatchValidator]
   });
+
+  toggleShowPassword(): void {
+    this.showPassword.update(v => !v);
+  }
+
+  toggleShowConfirmPassword(): void {
+    this.showConfirmPassword.update(v => !v);
+  }
 
   onSubmit(): void {
     if (this.form.invalid) {
@@ -241,7 +313,22 @@ export class RegisterTenantComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.authService.registerTenant(this.form.getRawValue()).subscribe({
+    const raw = this.form.getRawValue();
+    const slug = this.authService.deriveSlug(raw.companyName);
+
+    const payload: RegisterTenantRequest = {
+      companyName: raw.companyName,
+      slug: slug,
+      adminFirstName: 'Admin',
+      adminLastName: 'Admin',
+      firstName: 'Admin',
+      lastName: 'Admin',
+      adminEmail: raw.adminEmail,
+      adminPassword: raw.adminPassword,
+      confirmPassword: raw.confirmPassword
+    };
+
+    this.authService.registerTenant(payload).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.router.navigate(['/dashboard']);
