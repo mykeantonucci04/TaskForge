@@ -49,14 +49,23 @@ import { AuthService } from '../../../core/services/auth.service';
 
           <div class="form-group">
             <label class="form-label" for="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              class="form-input"
-              [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
-              placeholder="••••••••"
-              formControlName="password"
-            />
+            <div class="password-input-group">
+              <input
+                id="password"
+                [type]="showPassword() ? 'text' : 'password'"
+                class="form-input"
+                [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
+                placeholder="••••••••"
+                formControlName="password"
+              />
+              <button
+                type="button"
+                class="password-toggle-btn"
+                (click)="toggleShowPassword()"
+              >
+                {{ showPassword() ? 'Nascondi' : 'Mostra' }}
+              </button>
+            </div>
             @if (form.get('password')?.invalid && form.get('password')?.touched) {
               <span class="form-error">La password è obbligatoria.</span>
             }
@@ -143,6 +152,33 @@ import { AuthService } from '../../../core/services/auth.service';
       color: var(--text-secondary);
     }
 
+    .password-input-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-input-group .form-input {
+      padding-right: 5.5rem;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 0.5rem;
+      background: none;
+      border: none;
+      color: var(--color-primary);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      line-height: 1;
+    }
+
+    .password-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
     .auth-footer {
       margin-top: 1.5rem;
       padding-top: 1.25rem;
@@ -170,11 +206,16 @@ export class LoginComponent {
 
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly showPassword = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]]
   });
+
+  toggleShowPassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   onSubmit(): void {
     if (this.form.invalid) {
