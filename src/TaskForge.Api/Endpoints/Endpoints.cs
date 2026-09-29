@@ -142,6 +142,13 @@ public static class EndpointsExtensions
             return ToHttpResponse(result);
         }).WithName("CreateBoardColumn");
 
+        boards.MapPut("/{boardId:guid}/columns/reorder", async (Guid boardId, ReorderColumnsRequest request, ISender sender) =>
+        {
+            var command = new ReorderBoardColumnsCommand(boardId, request.Columns);
+            var result = await sender.Send(command);
+            return ToHttpResponse(result);
+        }).WithName("ReorderBoardColumns");
+
         var columns = apiGroup.MapGroup("/columns").WithTags("Columns").RequireAuthorization();
         columns.MapPut("/{id:guid}", async (Guid id, UpdateBoardColumnCommand command, ISender sender) =>
         {
@@ -337,6 +344,7 @@ public record CreateProjectRequest(string Name, string Key, string? Description)
 public record UpdateProjectRequest(string Name, string? Description);
 public record CreateBoardRequest(string Name, bool CreateDefaultColumns = true);
 public record CreateBoardColumnRequest(string Name, TaskItemStatus TargetStatus = TaskItemStatus.Todo);
+public record ReorderColumnsRequest(IReadOnlyList<ColumnOrderDto> Columns);
 public record CreateLabelRequest(string Name, string ColorHex);
 public record UpdateTaskRequest(string Title, string? Description, TaskPriority Priority, Guid? AssigneeId, DateTime? DueDateUtc);
 public record MoveTaskRequest(Guid TargetColumnId, double NewPosition, TaskItemStatus? NewStatus = null);
