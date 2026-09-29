@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TaskForge.Application.Common.Interfaces;
@@ -52,7 +53,8 @@ public static class DependencyInjection
             {
                 npgsqlOptions.MigrationsAssembly(typeof(TenantDbContext).Assembly.FullName);
             })
-            .AddInterceptors(auditableInterceptor, tenantInterceptor);
+            .AddInterceptors(auditableInterceptor, tenantInterceptor)
+            .ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
         });
 
         // Repositories & UnitOfWork

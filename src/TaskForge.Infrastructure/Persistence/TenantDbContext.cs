@@ -16,6 +16,8 @@ public class TenantDbContext : DbContext
         _tenantContext = tenantContext;
     }
 
+    public string SchemaName => _tenantContext?.SchemaName ?? string.Empty;
+
     // Tenant-Scoped Entities (Schema-per-Tenant)
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<Project> Projects => Set<Project>();
@@ -78,6 +80,8 @@ public class TenantDbContext : DbContext
             builder.ToTable("board_columns");
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Name).HasMaxLength(100).IsRequired();
+            builder.Property(c => c.Order).IsRequired();
+            builder.Property(c => c.TargetStatus).IsRequired();
             builder.HasOne(c => c.Board).WithMany(b => b.Columns).HasForeignKey(c => c.BoardId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -88,6 +92,12 @@ public class TenantDbContext : DbContext
             builder.Property(t => t.Title).HasMaxLength(200).IsRequired();
             builder.Ignore(t => t.Assignee);
             builder.HasOne(t => t.Column).WithMany(c => c.Tasks).HasForeignKey(t => t.ColumnId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(t => t.Labels)
+                .WithMany(l => l.Tasks)
+                .UsingEntity<Dictionary<string, object>>(
+                    "task_labels",
+                    j => j.HasOne<Label>().WithMany().HasForeignKey("LabelId").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<TaskItem>().WithMany().HasForeignKey("TaskId").OnDelete(DeleteBehavior.Cascade));
         });
 
         modelBuilder.Entity<Subtask>(builder =>

@@ -98,7 +98,7 @@ public partial class TenantProvisioningService : ITenantProvisioningService
         return normalized;
     }
 
-    private static string BuildTenantTablesDdl(string schema) => $"""
+    public static string BuildTenantTablesDdl(string schema) => $"""
         CREATE TABLE IF NOT EXISTS "{schema}"."workspaces" (
             "Id" uuid NOT NULL PRIMARY KEY,
             "TenantId" uuid NOT NULL,
@@ -142,12 +142,25 @@ public partial class TenantProvisioningService : ITenantProvisioningService
             "TenantId" uuid NOT NULL,
             "BoardId" uuid NOT NULL REFERENCES "{schema}"."boards"("Id") ON DELETE CASCADE,
             "Name" character varying(100) NOT NULL,
-            "Position" integer NOT NULL,
-            "CreatedAtUtc" timestamp with time zone NOT NULL,
+            "Order" integer NOT NULL,
+            "TargetStatus" integer NOT NULL DEFAULT 0,
+            "CreatedAtUtc" timestamp with time zone,
             "CreatedBy" character varying(100),
             "LastModifiedAtUtc" timestamp with time zone,
             "LastModifiedBy" character varying(100)
         );
+
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = '{schema}' AND table_name = 'board_columns' AND column_name = 'Position') 
+               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = '{schema}' AND table_name = 'board_columns' AND column_name = 'Order') THEN
+                ALTER TABLE "{schema}"."board_columns" RENAME COLUMN "Position" TO "Order";
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = '{schema}' AND table_name = 'board_columns' AND column_name = 'TargetStatus') THEN
+                ALTER TABLE "{schema}"."board_columns" ADD COLUMN "TargetStatus" integer NOT NULL DEFAULT 0;
+            END IF;
+        END $$;
 
         CREATE TABLE IF NOT EXISTS "{schema}"."tasks" (
             "Id" uuid NOT NULL PRIMARY KEY,
@@ -192,6 +205,12 @@ public partial class TenantProvisioningService : ITenantProvisioningService
             "WorkspaceId" uuid NOT NULL REFERENCES "{schema}"."workspaces"("Id") ON DELETE CASCADE,
             "Name" character varying(50) NOT NULL,
             "ColorHex" character varying(10) NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS "{schema}"."task_labels" (
+            "TaskId" uuid NOT NULL REFERENCES "{schema}"."tasks"("Id") ON DELETE CASCADE,
+            "LabelId" uuid NOT NULL REFERENCES "{schema}"."labels"("Id") ON DELETE CASCADE,
+            PRIMARY KEY ("TaskId", "LabelId")
         );
 
         CREATE TABLE IF NOT EXISTS "{schema}"."attachments" (
