@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TaskForge.Application.Common.Interfaces;
 using TaskForge.Application.Features.Auth;
@@ -21,6 +22,7 @@ public class AuthUnitTests
     private readonly IJwtTokenGenerator _tokenGenerator = Substitute.For<IJwtTokenGenerator>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ISchemaProvisioner _schemaProvisioner = Substitute.For<ISchemaProvisioner>();
+    private readonly ILogger<RegisterTenantCommandHandler> _registerLogger = Substitute.For<ILogger<RegisterTenantCommandHandler>>();
 
     private LoginCommandHandler CreateLoginHandler()
     {
@@ -237,7 +239,8 @@ public class AuthUnitTests
             _unitOfWork,
             _passwordHasher,
             _schemaProvisioner,
-            _tokenGenerator);
+            _tokenGenerator,
+            _registerLogger);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);

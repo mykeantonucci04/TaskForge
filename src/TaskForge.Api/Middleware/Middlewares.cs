@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TaskForge.Domain.Interfaces;
 using TaskForge.Shared.Constants;
 using TaskForge.Shared.Exceptions;
@@ -38,6 +39,12 @@ public class TenantResolutionMiddleware(RequestDelegate next)
 
 public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -46,7 +53,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
+            logger.LogError(ex, "An unhandled exception occurred: {ExceptionType} - {Message}", ex.GetType().Name, ex.Message);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -88,6 +95,31 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 Status = StatusCodes.Status400BadRequest,
                 Detail = domainEx.Message
             },
+            ArgumentException argEx => new ProblemDetails
+            {
+                Title = "Invalid Argument",
+                Status = StatusCodes.Status400BadRequest,
+                Detail = argEx.Message
+            },
+            InvalidOperationException invalidOpEx => new ProblemDetails
+            {
+                Title = "Operation Failed",
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Detail = invalidOpEx.Message
+            },
+            DbUpdateException dbEx => CreateDbUpdateProblemDetails(dbEx),
+            _ when exception.GetType().FullName?.Contains("Npgsql") == true => new ProblemDetails
+            {
+                Title = "Database Connection Error",
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Detail = "A database connectivity issue occurred. Please try again in a few moments."
+            },
+            OperationCanceledException => new ProblemDetails
+            {
+                Title = "Request Cancelled",
+                Status = StatusCodes.Status499ClientClosedRequest,
+                Detail = "The request was cancelled."
+            },
             _ => new ProblemDetails
             {
                 Title = "Internal Server Error",
@@ -97,7 +129,45 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         };
 
         context.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
-        var json = JsonSerializer.Serialize(problemDetails);
+        var json = JsonSerializer.Serialize(problemDetails, JsonOptions);
         return context.Response.WriteAsync(json);
     }
+
+    private static ProblemDetails CreateDbUpdateProblemDetails(DbUpdateException dbEx)
+    {
+        var innerMessage = dbEx.InnerException?.Message ?? dbEx.Message;
+
+        // PostgreSQL unique constraint violation (SQLSTATE 23505)
+        if (innerMessage.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
+            innerMessage.Contains("unique constraint", StringComparison.OrdinalIgnoreCase) ||
+            innerMessage.Contains("23505", StringComparison.Ordinal))
+        {
+            return new ProblemDetails
+            {
+                Title = "Conflict",
+                Status = StatusCodes.Status409Conflict,
+                Detail = "A record with the provided details already exists."
+            };
+        }
+
+        // PostgreSQL foreign key violation (SQLSTATE 23503)
+        if (innerMessage.Contains("foreign key", StringComparison.OrdinalIgnoreCase) ||
+            innerMessage.Contains("23503", StringComparison.Ordinal))
+        {
+            return new ProblemDetails
+            {
+                Title = "Reference Error",
+                Status = StatusCodes.Status400BadRequest,
+                Detail = "The operation references a record that does not exist."
+            };
+        }
+
+        return new ProblemDetails
+        {
+            Title = "Database Error",
+            Status = StatusCodes.Status422UnprocessableEntity,
+            Detail = "An error occurred while processing the data. Please verify your input and try again."
+        };
+    }
 }
+

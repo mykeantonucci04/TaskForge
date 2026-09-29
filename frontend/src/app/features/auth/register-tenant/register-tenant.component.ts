@@ -335,9 +335,45 @@ export class RegisterTenantComponent {
       },
       error: (err) => {
         this.isLoading.set(false);
-        const msg = err.error?.detail || err.error?.message || 'Errore durante la registrazione del tenant.';
+        const status = err.status;
+        const body = err.error;
+
+        // Extract error message from ProblemDetails or generic response
+        let msg: string;
+        if (body?.detail) {
+          msg = body.detail;
+        } else if (body?.title && body.title !== 'Internal Server Error') {
+          msg = body.title;
+        } else if (body?.errors && typeof body.errors === 'object') {
+          const errorMessages = Object.values(body.errors).flat();
+          msg = errorMessages.join('; ');
+        } else if (body?.message) {
+          msg = body.message;
+        } else {
+          // Fallback based on HTTP status code
+          switch (status) {
+            case 400:
+              msg = 'Dati non validi. Verifica i campi e riprova.';
+              break;
+            case 409:
+              msg = 'Un\'organizzazione con questo nome o un account con questa email esiste già.';
+              break;
+            case 422:
+              msg = 'Errore durante l\'elaborazione dei dati. Verifica l\'input e riprova.';
+              break;
+            case 503:
+              msg = 'Servizio temporaneamente non disponibile. Riprova tra qualche istante.';
+              break;
+            case 0:
+              msg = 'Impossibile raggiungere il server. Verifica la connessione di rete.';
+              break;
+            default:
+              msg = 'Si è verificato un errore durante la registrazione. Riprova più tardi.';
+          }
+        }
         this.errorMessage.set(msg);
       }
+
     });
   }
 }
