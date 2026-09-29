@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TaskForge.Application.Common.Interfaces;
 using TaskForge.Application.Features.Tenants;
@@ -19,7 +20,7 @@ public class ApplicationUnitTests
     private readonly IPasswordHasher _passwordHasher = Substitute.For<IPasswordHasher>();
     private readonly ISchemaProvisioner _schemaProvisioner = Substitute.For<ISchemaProvisioner>();
     private readonly IJwtTokenGenerator _tokenGenerator = Substitute.For<IJwtTokenGenerator>();
-
+    private readonly ILogger<RegisterTenantCommandHandler> _logger = Substitute.For<ILogger<RegisterTenantCommandHandler>>();
     // ==========================================
     // RegisterTenantCommandHandler Tests
     // ==========================================
@@ -56,7 +57,8 @@ public class ApplicationUnitTests
             _unitOfWork,
             _passwordHasher,
             _schemaProvisioner,
-            _tokenGenerator);
+            _tokenGenerator,
+            _logger);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -102,7 +104,8 @@ public class ApplicationUnitTests
             _unitOfWork,
             _passwordHasher,
             _schemaProvisioner,
-            _tokenGenerator);
+            _tokenGenerator,
+            _logger);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
