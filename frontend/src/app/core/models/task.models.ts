@@ -1,10 +1,10 @@
 import { TaskItemStatus } from './board.models';
 
 export enum TaskPriority {
-  Low = 0,
-  Medium = 1,
-  High = 2,
-  Urgent = 3
+  Low = 1,
+  Medium = 2,
+  High = 3,
+  Urgent = 4
 }
 
 export interface SubtaskDto {

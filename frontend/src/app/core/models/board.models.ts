@@ -1,11 +1,11 @@
 import { TaskDto } from './task.models';
 
 export enum TaskItemStatus {
-  Todo = 0,
-  InProgress = 1,
-  InReview = 2,
-  Done = 3,
-  Blocked = 4
+  Backlog = 1,
+  Todo = 2,
+  InProgress = 3,
+  InReview = 4,
+  Done = 5
 }
 
 export interface BoardDto {
