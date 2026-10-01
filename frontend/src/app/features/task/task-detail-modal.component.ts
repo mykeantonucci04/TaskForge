@@ -55,10 +55,10 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
                     formControlName="priority"
                     (change)="onAutoSave()"
                   >
-                    <option [value]="0">Bassa</option>
-                    <option [value]="1">Media</option>
-                    <option [value]="2">Alta</option>
-                    <option [value]="3">Urgente</option>
+                    <option [value]="1">Bassa</option>
+                    <option [value]="2">Media</option>
+                    <option [value]="3">Alta</option>
+                    <option [value]="4">Urgente</option>
                   </select>
                 </div>
 
@@ -97,18 +97,19 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
                 }
               </div>
 
-              <form class="add-subtask-form" (ngSubmit)="onAddSubtask()">
+              <div class="add-subtask-form">
                 <input
                   type="text"
                   class="form-input input-sm"
                   placeholder="+ Aggiungi elemento alla checklist..."
                   [value]="newSubtaskTitle()"
                   (input)="newSubtaskTitle.set($any($event.target).value)"
+                  (keydown.enter)="onAddSubtask()"
                 />
-                <button type="submit" class="btn btn-secondary btn-sm" [disabled]="!newSubtaskTitle().trim()">
+                <button type="button" class="btn btn-secondary btn-sm" [disabled]="!newSubtaskTitle().trim()" (click)="onAddSubtask()">
                   Aggiungi
                 </button>
-              </form>
+              </div>
             </section>
 
             <!-- Comments Section -->

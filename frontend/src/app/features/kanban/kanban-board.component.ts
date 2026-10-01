@@ -192,24 +192,25 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
               <!-- Quick Add Task in Column -->
               <div class="column-footer">
                 @if (activeAddColumnId() === col.id) {
-                  <form class="quick-add-form" (ngSubmit)="onCreateQuickTask(col)">
+                  <div class="quick-add-form">
                     <input
                       type="text"
                       class="form-input input-sm"
                       placeholder="Cosa c'è da fare?"
                       [value]="quickTaskTitle()"
                       (input)="quickTaskTitle.set($any($event.target).value)"
+                      (keydown.enter)="onCreateQuickTask(col)"
                       autoFocus
                     />
                     <div class="quick-add-actions">
-                      <button type="submit" class="btn btn-primary btn-sm" [disabled]="!quickTaskTitle().trim()">
+                      <button type="button" class="btn btn-primary btn-sm" [disabled]="!quickTaskTitle().trim()" (click)="onCreateQuickTask(col)">
                         Aggiungi
                       </button>
                       <button type="button" class="btn btn-secondary btn-sm" (click)="cancelQuickAdd()">
                         Annulla
                       </button>
                     </div>
-                  </form>
+                  </div>
                 } @else {
                   <button class="btn-quick-add" (click)="startQuickAdd(col.id)">
                     + Aggiungi Task
@@ -264,11 +265,11 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
           <div class="form-group">
             <label class="form-label" for="column-status">Stato di Destinazione Task</label>
             <select id="column-status" class="form-select" formControlName="targetStatus">
+              <option [value]="TaskItemStatus.Backlog">Arretrato (Backlog)</option>
               <option [value]="TaskItemStatus.Todo">Da Fare (Todo)</option>
               <option [value]="TaskItemStatus.InProgress">In Corso (InProgress)</option>
               <option [value]="TaskItemStatus.InReview">In Revisione (InReview)</option>
               <option [value]="TaskItemStatus.Done">Completato (Done)</option>
-              <option [value]="TaskItemStatus.Blocked">Bloccato (Blocked)</option>
             </select>
             <span class="form-hint">I task assegnati o spostati in questa colonna acquisiranno questo stato.</span>
           </div>
