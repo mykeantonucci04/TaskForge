@@ -1,0 +1,48 @@
+<div class="dashboard-container">
+  <div class="page-header">
+    <div>
+      <h1>Dashboard Panoramica</h1>
+      <p class="page-subtitle">Benvenuto in TaskForge, {{ authService.currentUser()?.fullName }}.</p>
+    </div>
+    <div class="badge badge-success">
+      ● Tenant Attivo: {{ authService.currentUser()?.tenantName || 'Standard' }}
+    </div>
+  </div>
+
+  <!-- Overview Cards Grid -->
+  <div class="metrics-grid">
+    <div class="metric-card card">
+      <div class="metric-label">Organizzazione / Tenant</div>
+      <div class="metric-value">{{ authService.currentUser()?.tenantName || 'Azienda' }}</div>
+      <div class="metric-subtext">ID: {{ authService.currentUser()?.tenantId }}</div>
+    </div>
+
+    <div class="metric-card card">
+      <div class="metric-label">Utente Connesso</div>
+      <div class="metric-value truncate">{{ authService.currentUser()?.email }}</div>
+      <div class="metric-subtext">Ruolo: Amministratore Tenant</div>
+    </div>
+
+    <div class="metric-card card">
+      <div class="metric-label">Stato Connessione API</div>
+      <div class="metric-value">
+        <span class="badge" [class.badge-success]="apiStatus() === 'Connesso (Healthy)'" [class.badge-warning]="apiStatus() !== 'Connesso (Healthy)'">
+          {{ apiStatus() }}
+        </span>
+      </div>
+      <div class="metric-subtext">Backend Render: PostgreSQL Neon</div>
+    </div>
+  </div>
+
+  <!-- Quick Action / Next Sprint Banner -->
+  <div class="banner card">
+    <div class="banner-content">
+      <div class="banner-badge">Sprint 1 Completato</div>
+      <h3>Architettura Core & Autenticazione Pronta</h3>
+      <p>
+        Il sistema di autenticazione multi-tenant con token JWT e isolamento logico è ora attivo e funzionante.
+        Nei prossimi sprint collegheremo la gestione dei Workspace e la Kanban Board interattiva con Drag & Drop.
+      </p>
+    </div>
+  </div>
+</div>

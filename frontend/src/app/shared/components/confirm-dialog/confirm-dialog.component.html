@@ -1,0 +1,24 @@
+<app-modal
+  [isOpen]="isOpen()"
+  [title]="title()"
+  (close)="cancel.emit()"
+>
+  <div class="confirm-modal-body">
+    <p [innerHTML]="message()"></p>
+    <ng-content></ng-content>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel.emit()" [disabled]="isLoading()">
+        {{ cancelLabel() }}
+      </button>
+      <button 
+        type="button" 
+        class="btn" 
+        [ngClass]="variant() === 'danger' ? 'btn-danger' : 'btn-primary'" 
+        [disabled]="isLoading()" 
+        (click)="confirm.emit()"
+      >
+        {{ isLoading() ? 'Operazione in corso...' : confirmLabel() }}
+      </button>
+    </div>
+  </div>
+</app-modal>

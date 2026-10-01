@@ -1,0 +1,197 @@
+<div class="kanban-page">
+  <app-breadcrumb [items]="breadcrumbItems()"></app-breadcrumb>
+
+  <div class="board-header">
+    <div class="board-header-top">
+      <div class="board-title-area">
+        <div class="board-tag">KANBAN</div>
+        <h1>{{ boardService.currentBoard()?.name }}</h1>
+      </div>
+
+      <div class="board-header-actions">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="openCreateColumnModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>+ Nuova Colonna</span>
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="openCreateBoardModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>+ Nuova Board</span>
+        </button>
+      </div>
+    </div>
+
+    @if (projectBoards().length > 0) {
+      <div class="board-nav-bar">
+        <span class="board-nav-label">Lavagne:</span>
+        <div class="board-pills-container">
+          @for (b of projectBoards(); track b.id) {
+            <button
+              type="button"
+              class="board-pill"
+              [class.active]="b.id === boardId()"
+              (click)="onSelectBoard(b.id)"
+            >
+              <span class="pill-icon">📋</span>
+              <span class="pill-name">{{ b.name }}</span>
+            </button>
+          }
+        </div>
+        <div class="board-select-wrapper">
+          <select
+            class="form-select select-sm"
+            [value]="boardId()"
+            (change)="onBoardSelectChange($event)"
+            aria-label="Seleziona Board"
+          >
+            @for (b of projectBoards(); track b.id) {
+              <option [value]="b.id">{{ b.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (boardService.isLoading()) {
+    <app-loading-spinner message="Caricamento board Kanban..."></app-loading-spinner>
+  } @else if (boardService.currentBoard()) {
+    <div class="board-canvas" cdkDropListGroup>
+      @for (col of boardService.currentBoard()?.columns; track col.id; let index = $index) {
+        <app-kanban-column
+          [column]="col"
+          [index]="index"
+          [totalColumns]="boardService.currentBoard()?.columns?.length || 1"
+          [activeAddColumnId]="activeAddColumnId()"
+          (moveLeft)="onMoveColumnLeft(col, index)"
+          (moveRight)="onMoveColumnRight(col, index)"
+          (deleteColumn)="confirmDeleteColumn(col)"
+          (addTask)="onCreateQuickTask($event.columnId, $event.title)"
+          (openTask)="openTaskDetail($event)"
+          (taskDrop)="onTaskDrop($event, col)"
+          (startQuickAdd)="startQuickAdd($event)"
+          (cancelQuickAdd)="cancelQuickAdd()"
+        ></app-kanban-column>
+      }
+
+      <div class="add-column-column">
+        <button type="button" class="btn-canvas-add-col" (click)="openCreateColumnModal()">
+          <span class="plus-icon">+</span>
+          <span>Aggiungi Colonna</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  <app-task-detail-modal
+    [isOpen]="isTaskModalOpen()"
+    [taskId]="selectedTaskId()"
+    (taskUpdated)="onReloadBoard()"
+    (close)="closeTaskModal()"
+  ></app-task-detail-modal>
+
+  <app-modal
+    [isOpen]="isCreateColumnModalOpen()"
+    [title]="'Aggiungi Nuova Colonna'"
+    (close)="closeCreateColumnModal()"
+  >
+    <form [formGroup]="columnForm" (ngSubmit)="onCreateColumn()">
+      @if (columnErrorMessage()) {
+        <div class="alert alert-danger">{{ columnErrorMessage() }}</div>
+      }
+      <div class="form-group">
+        <label class="form-label" for="column-name">Nome Colonna</label>
+        <input
+          id="column-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Code Review, QA, Bloccati..."
+          formControlName="name"
+        />
+        @if (columnForm.get('name')?.invalid && columnForm.get('name')?.touched) {
+          <span class="form-error">Il nome della colonna è obbligatorio.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="column-status">Stato di Destinazione Task</label>
+        <select id="column-status" class="form-select" formControlName="targetStatus">
+          <option [value]="TaskItemStatus.Backlog">Arretrato (Backlog)</option>
+          <option [value]="TaskItemStatus.Todo">Da Fare (Todo)</option>
+          <option [value]="TaskItemStatus.InProgress">In Corso (InProgress)</option>
+          <option [value]="TaskItemStatus.InReview">In Revisione (InReview)</option>
+          <option [value]="TaskItemStatus.Done">Completato (Done)</option>
+        </select>
+        <span class="form-hint">I task assegnati o spostati in questa colonna acquisiranno questo stato.</span>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateColumnModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="columnForm.invalid || isSubmittingColumn()">
+          {{ isSubmittingColumn() ? 'Aggiunta in corso...' : 'Aggiungi Colonna' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirm-dialog
+    [isOpen]="!!columnToDelete()"
+    [title]="'Elimina Colonna'"
+    [message]="getDeleteColumnMessage()"
+    confirmLabel="Elimina Colonna"
+    variant="danger"
+    [isLoading]="isDeletingColumn()"
+    (confirm)="onDeleteColumn()"
+    (cancel)="cancelDeleteColumn()"
+  >
+    @if ((columnToDelete()?.tasks?.length || 0) > 0) {
+      <div class="alert alert-warning">
+        <span>⚠️ Questa colonna contiene <strong>{{ columnToDelete()?.tasks?.length }}</strong> task. L'eliminazione comporterà la rimozione della colonna.</span>
+      </div>
+    }
+  </app-confirm-dialog>
+
+  <app-modal
+    [isOpen]="isCreateBoardModalOpen()"
+    [title]="'Crea Nuova Board Kanban'"
+    (close)="closeCreateBoardModal()"
+  >
+    <form [formGroup]="boardForm" (ngSubmit)="onCreateBoard()">
+      @if (boardErrorMessage()) {
+        <div class="alert alert-danger">{{ boardErrorMessage() }}</div>
+      }
+      <div class="form-group">
+        <label class="form-label" for="board-modal-name">Nome della Board</label>
+        <input
+          id="board-modal-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Sprint Attivo / Backlog"
+          formControlName="name"
+        />
+        @if (boardForm.get('name')?.invalid && boardForm.get('name')?.touched) {
+          <span class="form-error">Il nome della board è obbligatorio.</span>
+        }
+      </div>
+
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="createDefaultColumns" />
+          <span>Crea colonne predefinite (To Do, In Progress, Done)</span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateBoardModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="boardForm.invalid || isSubmittingBoard()">
+          {{ isSubmittingBoard() ? 'Creazione in corso...' : 'Crea Board' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+</div>
