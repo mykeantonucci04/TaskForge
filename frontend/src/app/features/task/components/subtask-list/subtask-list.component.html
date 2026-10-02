@@ -1,0 +1,29 @@
+<div class="subtask-list">
+  @for (sub of subtasks(); track sub.id) {
+    <div class="subtask-item">
+      <label class="checkbox-container">
+        <input
+          type="checkbox"
+          [checked]="sub.isCompleted"
+          (change)="toggle.emit(sub.id)"
+        />
+        <span class="subtask-title" [class.completed]="sub.isCompleted">{{ sub.title }}</span>
+      </label>
+      <button class="btn-icon-danger" (click)="delete.emit(sub.id)" title="Elimina">×</button>
+    </div>
+  }
+</div>
+
+<div class="add-subtask-form">
+  <input
+    type="text"
+    class="form-input input-sm"
+    placeholder="+ Aggiungi elemento alla checklist..."
+    [value]="newSubtaskTitle()"
+    (input)="newSubtaskTitle.set($any($event.target).value)"
+    (keydown.enter)="onAdd()"
+  />
+  <button type="button" class="btn btn-secondary btn-sm" [disabled]="!newSubtaskTitle().trim()" (click)="onAdd()">
+    Aggiungi
+  </button>
+</div>

@@ -1,0 +1,61 @@
+.task-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.label-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.label-remove {
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.label-actions {
+  margin-bottom: 0.75rem;
+}
+
+.select-sm {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.input-sm {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.new-label-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.color-input {
+  width: 32px;
+  height: 32px;
+  border: none;
+  cursor: pointer;
+  background: none;
+}

@@ -1,0 +1,116 @@
+<app-modal [isOpen]="isOpen()" [title]="'Dettaglio Task'" (close)="onClose()">
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Caricamento dettagli task...</p>
+    </div>
+  } @else if (taskDetail(); as task) {
+    <div class="task-modal-content">
+      <!-- Main Left Column -->
+      <div class="task-main">
+        <!-- Title & Description Form -->
+        <form [formGroup]="form" (ngSubmit)="onAutoSave()">
+          <div class="form-group">
+            <label class="form-label" for="task-title">Titolo</label>
+            <input
+              id="task-title"
+              type="text"
+              class="form-input title-input"
+              formControlName="title"
+              (blur)="onAutoSave()"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="task-desc">Descrizione</label>
+            <textarea
+              id="task-desc"
+              rows="3"
+              class="form-textarea"
+              placeholder="Aggiungi una descrizione più dettagliata..."
+              formControlName="description"
+              (blur)="onAutoSave()"
+            ></textarea>
+          </div>
+
+          <div class="meta-row">
+            <div class="form-group">
+              <label class="form-label" for="task-priority">Priorità</label>
+              <select
+                id="task-priority"
+                class="form-select"
+                formControlName="priority"
+                (change)="onAutoSave()"
+              >
+                <option [value]="1">Bassa</option>
+                <option [value]="2">Media</option>
+                <option [value]="3">Alta</option>
+                <option [value]="4">Urgente</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="task-due">Scadenza</label>
+              <input
+                id="task-due"
+                type="date"
+                class="form-input"
+                formControlName="dueDate"
+                (change)="onAutoSave()"
+              />
+            </div>
+          </div>
+        </form>
+
+        <!-- Subtasks Section -->
+        <section class="section subtasks-section">
+          <div class="section-header">
+            <h4>Checklist / Sotto-task ({{ getCompletedSubtaskCount() }}/{{ task.subtasks.length }})</h4>
+          </div>
+          
+          <app-subtask-list
+            [subtasks]="task.subtasks"
+            (toggle)="onToggleSubtask($event)"
+            (delete)="onDeleteSubtask($event)"
+            (add)="onAddSubtask($event)"
+          ></app-subtask-list>
+        </section>
+
+        <!-- Comments Section -->
+        <section class="section comments-section">
+          <div class="section-header">
+            <h4>Attività e Commenti</h4>
+          </div>
+
+          <app-comment-list
+            [comments]="task.comments"
+            [isSubmitting]="isSubmittingComment()"
+            (add)="onAddComment($event)"
+          ></app-comment-list>
+        </section>
+      </div>
+
+      <!-- Sidebar / Labels Column -->
+      <div class="task-sidebar">
+        <div class="sidebar-section">
+          <h4>Etichette</h4>
+          <app-label-manager
+            [taskLabels]="task.labels"
+            [availableLabels]="availableLabels()"
+            (assign)="onAssignLabel($event)"
+            (remove)="onRemoveLabel($event)"
+            (create)="onCreateLabel($event)"
+          ></app-label-manager>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="sidebar-section danger-zone">
+          <h4>Azioni</h4>
+          <button class="btn btn-danger btn-block btn-sm" (click)="onDeleteTask()">
+            🗑️ Elimina Task
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</app-modal>

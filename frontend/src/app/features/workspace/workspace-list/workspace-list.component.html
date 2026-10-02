@@ -1,0 +1,104 @@
+<div class="workspace-page">
+  <div class="page-header">
+    <div>
+      <h1>Aree di Lavoro (Workspaces)</h1>
+      <p class="page-subtitle">Gestisci gli spazi di lavoro e i progetti della tua organizzazione.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>Nuovo Workspace</span>
+    </button>
+  </div>
+
+  @if (workspaceService.isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Caricamento workspace in corso...</p>
+    </div>
+  } @else if (workspaceService.workspaces().length === 0) {
+    <div class="empty-state card">
+      <div class="empty-icon">📁</div>
+      <h3>Nessun Workspace presente</h3>
+      <p>Crea il tuo primo spazio di lavoro per iniziare a organizzare progetti e board.</p>
+      <button class="btn btn-primary" (click)="openCreateModal()">Crea Workspace</button>
+    </div>
+  } @else {
+    <div class="workspace-grid">
+      @for (ws of workspaceService.workspaces(); track ws.id) {
+        <div class="workspace-card card" (click)="onSelectWorkspace(ws)">
+          <div class="card-header">
+            <div class="ws-avatar">{{ ws.name.substring(0, 2).toUpperCase() }}</div>
+            <div class="ws-info">
+              <h3 class="ws-title">{{ ws.name }}</h3>
+              <span class="badge badge-primary">/{{ ws.slug }}</span>
+            </div>
+          </div>
+          <p class="ws-description">{{ ws.description || 'Nessuna descrizione specificata.' }}</p>
+          <div class="card-footer">
+            <span class="ws-date">Creato il {{ formatDate(ws.createdAtUtc) }}</span>
+            <span class="ws-arrow">→</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal Crea Workspace -->
+  <app-modal [isOpen]="isModalOpen()" [title]="'Crea Nuovo Workspace'" (close)="closeCreateModal()">
+    <form [formGroup]="form" (ngSubmit)="onCreateWorkspace()">
+      @if (errorMessage()) {
+        <div class="alert alert-danger">{{ errorMessage() }}</div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="ws-name">Nome Workspace</label>
+        <input
+          id="ws-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Sviluppo Software"
+          formControlName="name"
+          (input)="onNameInput()"
+        />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <span class="form-error">Il nome è obbligatorio.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="ws-slug">Slug Univoco (URL)</label>
+        <input
+          id="ws-slug"
+          type="text"
+          class="form-input"
+          placeholder="es. sviluppo-software"
+          formControlName="slug"
+        />
+        @if (form.get('slug')?.invalid && form.get('slug')?.touched) {
+          <span class="form-error">Lo slug può contenere solo lettere minuscole, numeri e trattini.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="ws-desc">Descrizione (Opzionale)</label>
+        <textarea
+          id="ws-desc"
+          rows="3"
+          class="form-textarea"
+          placeholder="Breve descrizione degli obiettivi di questo workspace"
+          formControlName="description"
+        ></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isSubmitting()">
+          {{ isSubmitting() ? 'Creazione...' : 'Crea Workspace' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+</div>

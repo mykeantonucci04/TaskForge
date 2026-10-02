@@ -1,0 +1,19 @@
+<div class="task-card card" (click)="openDetail.emit(task().id)">
+  <div class="task-card-header">
+    <span class="priority-badge" [ngClass]="getPriorityClass(task().priority)">
+      {{ getPriorityLabel(task().priority) }}
+    </span>
+  </div>
+
+  <h4 class="task-title">{{ task().title }}</h4>
+
+  @if (task().description) {
+    <p class="task-preview-desc">{{ task().description }}</p>
+  }
+
+  <div class="task-card-footer">
+    @if (task().dueDateUtc) {
+      <span class="task-due-date">📅 {{ formatDue(task().dueDateUtc!) }}</span>
+    }
+  </div>
+</div>

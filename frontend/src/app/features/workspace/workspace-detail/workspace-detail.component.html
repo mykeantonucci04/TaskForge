@@ -1,0 +1,108 @@
+<div class="workspace-detail-page">
+  <!-- Breadcrumb Navigation -->
+  <nav class="breadcrumb">
+    <a routerLink="/workspaces" class="breadcrumb-link">Workspaces</a>
+    <span class="breadcrumb-separator">/</span>
+    <span class="breadcrumb-current">{{ currentWorkspaceName() }}</span>
+  </nav>
+
+  <div class="page-header">
+    <div>
+      <h1>{{ currentWorkspaceName() }}</h1>
+      <p class="page-subtitle">Progetti attivi all'interno di questo spazio di lavoro.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>Nuovo Progetto</span>
+    </button>
+  </div>
+
+  @if (projectService.isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Caricamento progetti in corso...</p>
+    </div>
+  } @else if (projectService.projects().length === 0) {
+    <div class="empty-state card">
+      <div class="empty-icon">📊</div>
+      <h3>Nessun progetto trovato</h3>
+      <p>Crea il primo progetto per organizzare le tue board Kanban e i relativi task.</p>
+      <button class="btn btn-primary" (click)="openCreateModal()">Crea Progetto</button>
+    </div>
+  } @else {
+    <div class="project-grid">
+      @for (prj of projectService.projects(); track prj.id) {
+        <div class="project-card card" (click)="onSelectProject(prj)">
+          <div class="card-header">
+            <span class="project-key">{{ prj.key }}</span>
+            <h3 class="project-title">{{ prj.name }}</h3>
+          </div>
+          <p class="project-description">{{ prj.description || 'Nessuna descrizione del progetto.' }}</p>
+          <div class="card-footer">
+            <span class="footer-text">Visualizza Board Kanban</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal Crea Progetto -->
+  <app-modal [isOpen]="isModalOpen()" [title]="'Crea Nuovo Progetto'" (close)="closeCreateModal()">
+    <form [formGroup]="form" (ngSubmit)="onCreateProject()">
+      @if (errorMessage()) {
+        <div class="alert alert-danger">{{ errorMessage() }}</div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="prj-name">Nome Progetto</label>
+        <input
+          id="prj-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Piattaforma Web"
+          formControlName="name"
+          (input)="onNameInput()"
+        />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <span class="form-error">Il nome è obbligatorio.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prj-key">Chiave Univoca (Key: 2-10 lettere)</label>
+        <input
+          id="prj-key"
+          type="text"
+          class="form-input"
+          placeholder="es. WEB"
+          formControlName="key"
+        />
+        @if (form.get('key')?.invalid && form.get('key')?.touched) {
+          <span class="form-error">La chiave deve contenere tra 2 e 10 caratteri alfanumerici.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prj-desc">Descrizione (Opzionale)</label>
+        <textarea
+          id="prj-desc"
+          rows="3"
+          class="form-textarea"
+          placeholder="Obiettivi e finalità del progetto"
+          formControlName="description"
+        ></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isSubmitting()">
+          {{ isSubmitting() ? 'Creazione...' : 'Crea Progetto' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+</div>

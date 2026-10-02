@@ -1,0 +1,102 @@
+<div class="project-detail-page">
+  <!-- Breadcrumb Navigation -->
+  <nav class="breadcrumb">
+    <a routerLink="/workspaces" class="breadcrumb-link">Workspaces</a>
+    <span class="breadcrumb-separator">/</span>
+    @if (workspaceService.selectedWorkspace()) {
+      <a [routerLink]="['/workspaces', workspaceService.selectedWorkspace()?.id]" class="breadcrumb-link">
+        {{ workspaceService.selectedWorkspace()?.name }}
+      </a>
+      <span class="breadcrumb-separator">/</span>
+    }
+    <span class="breadcrumb-current">{{ projectService.currentProject()?.name || 'Progetto' }}</span>
+  </nav>
+
+  @if (projectService.isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Caricamento progetto in corso...</p>
+    </div>
+  } @else if (projectService.currentProject()) {
+    <div class="page-header">
+      <div>
+        <div class="title-with-key">
+          <span class="project-key">{{ projectService.currentProject()?.key }}</span>
+          <h1>{{ projectService.currentProject()?.name }}</h1>
+        </div>
+        <p class="page-subtitle">{{ projectService.currentProject()?.description || 'Nessuna descrizione del progetto.' }}</p>
+      </div>
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Nuova Board Kanban</span>
+      </button>
+    </div>
+
+    <section class="boards-section">
+      <h2>Kanban Boards</h2>
+      @if (projectService.currentProject()?.boards?.length === 0) {
+        <div class="empty-state card">
+          <div class="empty-icon">📋</div>
+          <h3>Nessuna Board presente</h3>
+          <p>Crea la tua prima lavagna Kanban per visualizzare e trascinare i task nelle colonne di lavoro.</p>
+          <button class="btn btn-primary" (click)="openCreateModal()">Crea Board Kanban</button>
+        </div>
+      } @else {
+        <div class="board-grid">
+          @for (b of projectService.currentProject()?.boards; track b.id) {
+            <div class="board-card card" (click)="onSelectBoard(b)">
+              <div class="card-header">
+                <span class="board-icon">📋</span>
+                <h3 class="board-title">{{ b.name }}</h3>
+              </div>
+              <div class="card-footer">
+                <span class="footer-action">Apri Lavagna Kanban</span>
+                <span class="arrow">→</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Modal Crea Board -->
+  <app-modal [isOpen]="isModalOpen()" [title]="'Crea Nuova Board Kanban'" (close)="closeCreateModal()">
+    <form [formGroup]="form" (ngSubmit)="onCreateBoard()">
+      @if (errorMessage()) {
+        <div class="alert alert-danger">{{ errorMessage() }}</div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="board-name">Nome della Board</label>
+        <input
+          id="board-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Sprint Attivo / Backlog"
+          formControlName="name"
+        />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <span class="form-error">Il nome della board è obbligatorio.</span>
+        }
+      </div>
+
+      <div class="checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="createDefaultColumns" />
+          <span>Crea colonne predefinite (To Do, In Progress, Done)</span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isSubmitting()">
+          {{ isSubmitting() ? 'Creazione...' : 'Crea Board' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+</div>

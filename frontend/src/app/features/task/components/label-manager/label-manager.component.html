@@ -1,0 +1,50 @@
+<div class="task-labels">
+  @for (label of taskLabels(); track label.id) {
+    <span
+      class="label-badge"
+      [style.background-color]="label.colorHex + '25'"
+      [style.border-color]="label.colorHex"
+      [style.color]="label.colorHex"
+    >
+      {{ label.name }}
+      <button class="label-remove" (click)="remove.emit(label.id)">×</button>
+    </span>
+  }
+</div>
+
+<!-- Assign Available Label -->
+<div class="label-actions">
+  <select class="form-select select-sm" #labelSelect (change)="onAssign(labelSelect.value); labelSelect.value=''">
+    <option value="">+ Assegna etichetta...</option>
+    @for (l of availableLabels(); track l.id) {
+      <option [value]="l.id">{{ l.name }}</option>
+    }
+  </select>
+</div>
+
+<!-- Create new label form -->
+<div class="new-label-box">
+  <input
+    type="text"
+    class="form-input input-sm"
+    placeholder="Nuova etichetta..."
+    [value]="newLabelName()"
+    (input)="newLabelName.set($any($event.target).value)"
+  />
+  <div class="color-picker-row">
+    <input
+      type="color"
+      class="color-input"
+      [value]="newLabelColor()"
+      (input)="newLabelColor.set($any($event.target).value)"
+    />
+    <button
+      type="button"
+      class="btn btn-secondary btn-sm"
+      [disabled]="!newLabelName().trim()"
+      (click)="onCreate()"
+    >
+      Crea
+    </button>
+  </div>
+</div>

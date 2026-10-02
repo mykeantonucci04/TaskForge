@@ -1,0 +1,29 @@
+<div class="comments-list">
+  @for (c of comments(); track c.id) {
+    <div class="comment-item">
+      <div class="comment-header">
+        <span class="comment-author">Utente</span>
+        <span class="comment-date">{{ formatDate(c.createdAtUtc) }}</span>
+      </div>
+      <p class="comment-content">{{ c.content }}</p>
+    </div>
+  }
+</div>
+
+<div class="add-comment-box">
+  <textarea
+    rows="2"
+    class="form-textarea"
+    placeholder="Scrivi un commento..."
+    [value]="newCommentText()"
+    (input)="newCommentText.set($any($event.target).value)"
+  ></textarea>
+  <button
+    type="button"
+    class="btn btn-primary btn-sm"
+    [disabled]="!newCommentText().trim() || isSubmitting()"
+    (click)="onAdd()"
+  >
+    Invia Commento
+  </button>
+</div>

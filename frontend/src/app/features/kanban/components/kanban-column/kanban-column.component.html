@@ -1,0 +1,70 @@
+<div class="kanban-column card">
+  <div class="column-header">
+    <div class="column-title-group">
+      <span class="column-title">{{ column().name }}</span>
+      <span class="column-count">{{ column().tasks.length }}</span>
+    </div>
+    <div class="column-actions">
+      <button
+        type="button"
+        class="btn-col-action"
+        [disabled]="index() === 0"
+        (click)="moveLeft.emit()"
+        title="Sposta colonna a sinistra"
+        aria-label="Sposta colonna a sinistra"
+      >
+        &larr;
+      </button>
+      <button
+        type="button"
+        class="btn-col-action"
+        [disabled]="index() >= totalColumns() - 1"
+        (click)="moveRight.emit()"
+        title="Sposta colonna a destra"
+        aria-label="Sposta colonna a destra"
+      >
+        &rarr;
+      </button>
+      <button
+        type="button"
+        class="btn-col-action btn-delete-col"
+        (click)="deleteColumn.emit()"
+        title="Elimina colonna"
+        aria-label="Elimina colonna"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="task-drop-list"
+    cdkDropList
+    [cdkDropListData]="column().tasks"
+    [id]="column().id"
+    (cdkDropListDropped)="onTaskDrop($event)"
+  >
+    @for (task of column().tasks; track task.id) {
+      <app-task-card
+        [task]="task"
+        (openDetail)="openTask.emit($event)"
+        cdkDrag
+      ></app-task-card>
+    }
+
+    @if (column().tasks.length === 0) {
+      <div class="empty-column-placeholder">
+        Trascina qui i task
+      </div>
+    }
+  </div>
+
+  <app-quick-add-task
+    [isActive]="activeAddColumnId() === column().id"
+    (submit)="onQuickAddSubmit($event)"
+    (activate)="startQuickAdd.emit(column().id)"
+    (cancel)="cancelQuickAdd.emit()"
+  ></app-quick-add-task>
+</div>
