@@ -1,27 +1,25 @@
-<div class="column-footer">
-  @if (isActive()) {
-    <div class="quick-add-form">
-      <input
-        type="text"
-        class="form-input input-sm"
-        placeholder="Cosa c'è da fare?"
-        [value]="title()"
-        (input)="onTitleInput($event)"
-        (keydown.enter)="onSubmit()"
-        autofocus
-      />
-      <div class="quick-add-actions">
-        <button type="button" class="btn btn-primary btn-sm" [disabled]="!title().trim()" (click)="onSubmit()">
-          Aggiungi
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" (click)="onCancel()">
-          Annulla
-        </button>
-      </div>
+@if (isActive()) {
+  <div class="quick-add-form">
+    <input
+      type="text"
+      class="form-input input-sm"
+      placeholder="Cosa c'è da fare?"
+      [value]="title()"
+      (input)="onTitleInput($event)"
+      (keydown.enter)="onSubmit()"
+      autofocus
+    />
+    <div class="quick-add-actions">
+      <button type="button" class="btn btn-primary btn-sm" [disabled]="!title().trim()" (click)="onSubmit()">
+        Aggiungi
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="onCancel()">
+        Annulla
+      </button>
     </div>
-  } @else {
-    <button class="btn-quick-add" (click)="activate.emit()">
-      + Aggiungi Task
-    </button>
-  }
-</div>
+  </div>
+} @else {
+  <button class="btn-quick-add" type="button" (click)="activate.emit()">
+    + Aggiungi Task
+  </button>
+}

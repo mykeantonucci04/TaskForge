@@ -13,7 +13,7 @@ import {
   ReorderColumnsRequest,
   TaskItemStatus
 } from '../../core/models/board.models';
-import { TaskDto } from '../../core/models/task.models';
+import { TaskDto, TaskPriority } from '../../core/models/task.models';
 
 import { BreadcrumbComponent, BreadcrumbItem } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
@@ -360,10 +360,16 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   onCreateQuickTask(columnId: string, title: string): void {
     this.taskService.createTask({
       columnId,
-      title
+      title,
+      priority: TaskPriority.Low  // BE richiede priority valida (1-4), default Bassa
     }).subscribe({
       next: () => {
         this.cancelQuickAdd();
+        this.onReloadBoard();
+      },
+      error: (err) => {
+        console.error('Errore creazione task:', err?.error?.detail || err?.message);
+        // Ricarica la board per evitare stati inconsistenti
         this.onReloadBoard();
       }
     });
