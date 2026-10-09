@@ -75,4 +75,14 @@ describe('TaskService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(movedTask);
   });
+
+  it('should delete comment via DELETE /comments/:id', () => {
+    service.deleteComment('comment-123').subscribe(result => {
+      expect(result).toBe(true);
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiUrl}/comments/comment-123`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(true);
+  });
 });

@@ -86,6 +86,7 @@
             [comments]="task.comments"
             [isSubmitting]="isSubmittingComment()"
             (add)="onAddComment($event)"
+            (delete)="onDeleteComment($event)"
           ></app-comment-list>
         </section>
       </div>

@@ -13,6 +13,7 @@ export class CommentListComponent {
   readonly comments = input.required<CommentDto[]>();
   readonly isSubmitting = input<boolean>(false);
   readonly add = output<string>();
+  readonly delete = output<string>();
 
   readonly newCommentText = signal('');
 
@@ -22,6 +23,10 @@ export class CommentListComponent {
       this.add.emit(text);
       this.newCommentText.set('');
     }
+  }
+
+  onDelete(commentId: string): void {
+    this.delete.emit(commentId);
   }
 
   formatDate(utcStr: string): string {
