@@ -26,13 +26,29 @@
         </div>
         <p class="page-subtitle">{{ projectService.currentProject()?.description || 'Nessuna descrizione del progetto.' }}</p>
       </div>
-      <button class="btn btn-primary" (click)="openCreateModal()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span>Nuova Board Kanban</span>
-      </button>
+      <div class="header-actions">
+        <button type="button" class="btn btn-secondary" (click)="openEditModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          <span>Modifica Progetto</span>
+        </button>
+        <button type="button" class="btn btn-danger" (click)="openDeleteConfirm()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Elimina Progetto</span>
+        </button>
+        <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Nuova Board Kanban</span>
+        </button>
+      </div>
     </div>
 
     <section class="boards-section">
@@ -99,4 +115,61 @@
       </div>
     </form>
   </app-modal>
+
+  <!-- Modal Modifica Progetto -->
+  <app-modal [isOpen]="isEditModalOpen()" [title]="'Modifica Progetto'" (close)="closeEditModal()">
+    <form [formGroup]="editForm" (ngSubmit)="onUpdateProject()">
+      @if (editErrorMessage()) {
+        <div class="alert alert-danger">{{ editErrorMessage() }}</div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="edit-project-name">Nome del Progetto</label>
+        <input
+          id="edit-project-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Portale Web"
+          formControlName="name"
+        />
+        @if (editForm.get('name')?.invalid && editForm.get('name')?.touched) {
+          <span class="form-error">Il nome del progetto è obbligatorio (max 100 caratteri).</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="edit-project-description">Descrizione</label>
+        <textarea
+          id="edit-project-description"
+          rows="3"
+          class="form-textarea"
+          placeholder="Descrizione opzionale del progetto"
+          formControlName="description"
+        ></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeEditModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || isSubmittingEdit()">
+          {{ isSubmittingEdit() ? 'Salvataggio...' : 'Salva Modifiche' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Dialog Elimina Progetto -->
+  <app-confirm-dialog
+    [isOpen]="isDeleteConfirmOpen()"
+    [title]="'Elimina Progetto'"
+    message="Sei sicuro di voler eliminare questo progetto? Questa azione eliminerà anche tutte le board associate e non può essere annullata."
+    confirmLabel="Elimina Progetto"
+    variant="danger"
+    [isLoading]="isDeleting()"
+    (confirm)="onConfirmDelete()"
+    (cancel)="closeDeleteConfirm()"
+  >
+    @if (deleteErrorMessage()) {
+      <div class="alert alert-danger" style="margin-top: 0.75rem;">{{ deleteErrorMessage() }}</div>
+    }
+  </app-confirm-dialog>
 </div>

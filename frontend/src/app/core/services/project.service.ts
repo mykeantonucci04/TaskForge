@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ProjectDto, ProjectDetailDto, CreateProjectRequest, BoardSummaryDto } from '../models/project.models';
+import { ProjectDto, ProjectDetailDto, CreateProjectRequest, UpdateProjectRequest, BoardSummaryDto } from '../models/project.models';
 import { BoardDto, CreateBoardRequest } from '../models/board.models';
 
 @Injectable({
@@ -46,6 +46,33 @@ export class ProjectService {
           this.isLoading.set(false);
         },
         error: () => this.isLoading.set(false)
+      })
+    );
+  }
+
+  updateProject(id: string, request: UpdateProjectRequest): Observable<ProjectDto> {
+    return this.http.put<ProjectDto>(`${this.apiBase}/projects/${id}`, request).pipe(
+      tap((updated) => {
+        this.projects.update(list => list.map(p => p.id === id ? { ...p, ...updated } : p));
+        const current = this.currentProject();
+        if (current && current.id === id) {
+          this.currentProject.set({
+            ...current,
+            name: updated.name,
+            description: updated.description
+          });
+        }
+      })
+    );
+  }
+
+  deleteProject(id: string): Observable<boolean> {
+    return this.http.delete<boolean>(`${this.apiBase}/projects/${id}`).pipe(
+      tap(() => {
+        this.projects.update(list => list.filter(p => p.id !== id));
+        if (this.currentProject()?.id === id) {
+          this.currentProject.set(null);
+        }
       })
     );
   }
