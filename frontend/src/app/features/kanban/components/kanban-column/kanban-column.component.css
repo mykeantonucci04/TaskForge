@@ -95,6 +95,13 @@
   padding: 0.25rem;
 }
 
+/* Footer con il bottone quick-add — deve rimanere visibile */
+app-quick-add-task {
+  flex-shrink: 0;
+  display: block;
+  margin-top: 0.5rem;
+}
+
 .empty-column-placeholder {
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-md);
