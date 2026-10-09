@@ -1,4 +1,10 @@
-import { TaskDto } from './task.models';
+import { TaskDto, TaskPriority } from './task.models';
+
+export interface BoardFilterCriteria {
+  search: string;
+  priority: TaskPriority | null;
+  labelId: string | null;
+}
 
 export enum TaskItemStatus {
   Backlog = 1,

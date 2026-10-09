@@ -61,12 +61,18 @@
   @if (boardService.isLoading()) {
     <app-loading-spinner message="Caricamento board Kanban..."></app-loading-spinner>
   } @else if (boardService.currentBoard()) {
+    <app-board-filter-toolbar
+      [labels]="availableLabels()"
+      (filterChange)="onFilterChange($event)"
+      (reset)="onResetFilters()"
+    ></app-board-filter-toolbar>
+
     <div class="board-canvas" cdkDropListGroup>
-      @for (col of boardService.currentBoard()?.columns; track col.id; let index = $index) {
+      @for (col of filteredColumns(); track col.id; let index = $index) {
         <app-kanban-column
           [column]="col"
           [index]="index"
-          [totalColumns]="boardService.currentBoard()?.columns?.length || 1"
+          [totalColumns]="filteredColumns().length || 1"
           [activeAddColumnId]="activeAddColumnId()"
           (moveLeft)="onMoveColumnLeft(col, index)"
           (moveRight)="onMoveColumnRight(col, index)"

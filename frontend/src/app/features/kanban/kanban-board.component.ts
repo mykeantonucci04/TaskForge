@@ -7,13 +7,16 @@ import { Subscription } from 'rxjs';
 
 import { BoardService } from '../../core/services/board.service';
 import { TaskService } from '../../core/services/task.service';
+import { WorkspaceService } from '../../core/services/workspace.service';
+import { ProjectService } from '../../core/services/project.service';
 import {
   BoardColumnDetailDto,
   BoardDto,
+  BoardFilterCriteria,
   ReorderColumnsRequest,
   TaskItemStatus
 } from '../../core/models/board.models';
-import { TaskDto, TaskPriority } from '../../core/models/task.models';
+import { LabelDto, TaskDto, TaskPriority } from '../../core/models/task.models';
 
 import { BreadcrumbComponent, BreadcrumbItem } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
@@ -21,6 +24,7 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { TaskDetailModalComponent } from '../task/task-detail-modal.component';
 import { KanbanColumnComponent } from './components/kanban-column/kanban-column.component';
+import { BoardFilterToolbarComponent } from './components/board-filter-toolbar/board-filter-toolbar.component';
 
 @Component({
   selector: 'app-kanban-board',
@@ -34,7 +38,8 @@ import { KanbanColumnComponent } from './components/kanban-column/kanban-column.
     ConfirmDialogComponent,
     ModalComponent,
     TaskDetailModalComponent,
-    KanbanColumnComponent
+    KanbanColumnComponent,
+    BoardFilterToolbarComponent
   ],
   templateUrl: './kanban-board.component.html',
   styleUrl: './kanban-board.component.css'
@@ -42,6 +47,8 @@ import { KanbanColumnComponent } from './components/kanban-column/kanban-column.
 export class KanbanBoardComponent implements OnInit, OnDestroy {
   readonly boardService = inject(BoardService);
   private readonly taskService = inject(TaskService);
+  private readonly workspaceService = inject(WorkspaceService);
+  private readonly projectService = inject(ProjectService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -54,6 +61,45 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   readonly selectedTaskId = signal<string | null>(null);
 
   readonly activeAddColumnId = signal<string | null>(null);
+
+  // Filter Toolbar State
+  readonly searchQuery = signal('');
+  readonly selectedPriority = signal<TaskPriority | null>(null);
+  readonly selectedLabelId = signal<string | null>(null);
+  readonly availableLabels = signal<LabelDto[]>([]);
+
+  readonly filteredColumns = computed<BoardColumnDetailDto[]>(() => {
+    const board = this.boardService.currentBoard();
+    if (!board) return [];
+
+    const query = this.searchQuery().trim().toLowerCase();
+    const priority = this.selectedPriority();
+    const labelId = this.selectedLabelId();
+
+    if (!query && priority === null && !labelId) {
+      return board.columns;
+    }
+
+    return board.columns.map(col => ({
+      ...col,
+      tasks: col.tasks.filter(task => {
+        if (query) {
+          const titleMatch = task.title?.toLowerCase().includes(query) ?? false;
+          const descMatch = task.description?.toLowerCase().includes(query) ?? false;
+          if (!titleMatch && !descMatch) {
+            return false;
+          }
+        }
+        if (priority !== null && task.priority !== priority) {
+          return false;
+        }
+        if (labelId && !task.labels?.some(l => l.id === labelId)) {
+          return false;
+        }
+        return true;
+      })
+    }));
+  });
 
   // Column Creation Modal State
   readonly isCreateColumnModalOpen = signal(false);
@@ -123,9 +169,34 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
       next: (board) => {
         if (board?.projectId) {
           this.loadProjectBoards(board.projectId);
+          this.loadWorkspaceLabels(board.projectId);
+        } else {
+          this.loadWorkspaceLabels();
         }
       }
     });
+  }
+
+  loadWorkspaceLabels(projectId?: string): void {
+    const wsId = this.workspaceService.selectedWorkspace()?.id;
+    if (wsId) {
+      this.taskService.getWorkspaceLabels(wsId).subscribe({
+        next: (labels) => this.availableLabels.set(labels),
+        error: () => this.availableLabels.set([])
+      });
+    } else if (projectId) {
+      this.projectService.getProjectById(projectId).subscribe({
+        next: (project) => {
+          if (project?.workspaceId) {
+            this.taskService.getWorkspaceLabels(project.workspaceId).subscribe({
+              next: (labels) => this.availableLabels.set(labels),
+              error: () => this.availableLabels.set([])
+            });
+          }
+        },
+        error: () => this.availableLabels.set([])
+      });
+    }
   }
 
   loadProjectBoards(projectId: string): void {
@@ -438,5 +509,17 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   closeTaskModal(): void {
     this.isTaskModalOpen.set(false);
     this.selectedTaskId.set(null);
+  }
+
+  onFilterChange(criteria: BoardFilterCriteria): void {
+    this.searchQuery.set(criteria.search);
+    this.selectedPriority.set(criteria.priority);
+    this.selectedLabelId.set(criteria.labelId);
+  }
+
+  onResetFilters(): void {
+    this.searchQuery.set('');
+    this.selectedPriority.set(null);
+    this.selectedLabelId.set(null);
   }
 }
