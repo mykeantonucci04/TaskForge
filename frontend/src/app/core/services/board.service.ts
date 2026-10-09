@@ -8,6 +8,7 @@ import {
   BoardDto,
   CreateBoardRequest,
   CreateBoardColumnRequest,
+  UpdateBoardColumnRequest,
   ReorderColumnsRequest
 } from '../models/board.models';
 
@@ -64,6 +65,32 @@ export class BoardService {
               }
             ].sort((a, b) => a.order - b.order)
           });
+        }
+      })
+    );
+  }
+
+  updateColumn(columnId: string, request: UpdateBoardColumnRequest): Observable<BoardColumnDto> {
+    return this.http.put<BoardColumnDto>(`${this.apiBase}/columns/${columnId}`, request).pipe(
+      tap((updatedCol) => {
+        const board = this.currentBoard();
+        if (board) {
+          const updatedColumns = board.columns
+            .map((col) => {
+              if (col.id === columnId) {
+                return {
+                  ...col,
+                  name: updatedCol.name,
+                  order: updatedCol.order,
+                  targetStatus: updatedCol.targetStatus,
+                  tasks: col.tasks
+                };
+              }
+              return col;
+            })
+            .sort((a, b) => a.order - b.order);
+
+          this.currentBoard.set({ ...board, columns: updatedColumns });
         }
       })
     );

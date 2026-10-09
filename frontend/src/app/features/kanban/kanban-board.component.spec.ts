@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, ActivatedRoute } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { KanbanBoardComponent } from './kanban-board.component';
 import { BoardService } from '../../core/services/board.service';
 import { TaskService } from '../../core/services/task.service';
@@ -223,5 +223,90 @@ describe('KanbanBoardComponent', () => {
     const navigateSpy = vi.spyOn(router, 'navigate');
     component.onSelectBoard('b-2');
     expect(navigateSpy).toHaveBeenCalledWith(['/boards', 'b-2']);
+  });
+
+  it('should open edit column modal with prefilled data and close it', () => {
+    const targetCol = mockBoardDetail.columns[1];
+    component.openEditColumnModal(targetCol);
+
+    expect(component.columnToEdit()?.id).toBe('c-2');
+    expect(component.isEditColumnModalOpen()).toBe(true);
+    expect(component.editColumnForm.value.name).toBe('In Progress');
+    expect(component.editColumnForm.value.targetStatus).toBe(TaskItemStatus.InProgress);
+    expect(component.editColumnErrorMessage()).toBeNull();
+
+    component.closeEditColumnModal();
+    expect(component.columnToEdit()).toBeNull();
+    expect(component.isEditColumnModalOpen()).toBe(false);
+  });
+
+  it('should update a column via onUpdateColumn and close modal on success', () => {
+    const targetCol = mockBoardDetail.columns[0];
+    const mockUpdatedCol: BoardColumnDto = {
+      id: 'c-1',
+      boardId: 'b-1',
+      name: 'Ready for Dev',
+      order: 0,
+      targetStatus: TaskItemStatus.Todo
+    };
+
+    const updateColSpy = vi.spyOn(boardService, 'updateColumn').mockReturnValue(of(mockUpdatedCol));
+
+    component.openEditColumnModal(targetCol);
+    component.editColumnForm.setValue({
+      name: '  Ready for Dev  ',
+      targetStatus: TaskItemStatus.Todo
+    });
+
+    component.onUpdateColumn();
+
+    expect(updateColSpy).toHaveBeenCalledWith('c-1', {
+      name: 'Ready for Dev',
+      order: 0,
+      targetStatus: TaskItemStatus.Todo
+    });
+    expect(component.isSubmittingEditColumn()).toBe(false);
+    expect(component.isEditColumnModalOpen()).toBe(false);
+    expect(component.columnToEdit()).toBeNull();
+  });
+
+  it('should not submit onUpdateColumn if edit form is invalid', () => {
+    const updateColSpy = vi.spyOn(boardService, 'updateColumn');
+    const targetCol = mockBoardDetail.columns[0];
+
+    component.openEditColumnModal(targetCol);
+    component.editColumnForm.setValue({
+      name: '',
+      targetStatus: TaskItemStatus.Todo
+    });
+
+    component.onUpdateColumn();
+
+    expect(updateColSpy).not.toHaveBeenCalled();
+    expect(component.editColumnForm.invalid).toBe(true);
+    expect(component.isEditColumnModalOpen()).toBe(true);
+  });
+
+  it('should handle error when updating column fails', () => {
+    const targetCol = mockBoardDetail.columns[0];
+    const errorResponse = {
+      error: {
+        detail: 'Nome colonna già esistente'
+      }
+    };
+
+    vi.spyOn(boardService, 'updateColumn').mockReturnValue(throwError(() => errorResponse));
+
+    component.openEditColumnModal(targetCol);
+    component.editColumnForm.setValue({
+      name: 'Duplicate Column',
+      targetStatus: TaskItemStatus.Todo
+    });
+
+    component.onUpdateColumn();
+
+    expect(component.isSubmittingEditColumn()).toBe(false);
+    expect(component.editColumnErrorMessage()).toBe('Nome colonna già esistente');
+    expect(component.isEditColumnModalOpen()).toBe(true);
   });
 });

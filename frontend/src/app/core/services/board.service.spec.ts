@@ -10,6 +10,7 @@ import {
   TaskItemStatus,
   ReorderColumnsRequest,
   CreateBoardColumnRequest,
+  UpdateBoardColumnRequest,
   CreateBoardRequest
 } from '../models/board.models';
 
@@ -226,5 +227,72 @@ describe('BoardService', () => {
     const req = httpTesting.expectOne(`${environment.apiUrl}/columns/col-2`);
     expect(req.request.method).toBe('DELETE');
     req.flush(true);
+  });
+
+  it('should update a column and preserve tasks in currentBoard signal', () => {
+    const mockTask = {
+      id: 'task-1',
+      columnId: 'col-1',
+      title: 'Existing Task',
+      description: null,
+      status: TaskItemStatus.Todo,
+      priority: 2,
+      position: 1000,
+      dueDate: null,
+      assigneeId: null,
+      labelIds: [],
+      commentsCount: 0,
+      createdAtUtc: new Date().toISOString()
+    };
+
+    // Seed currentBoard with a column that has tasks
+    service.currentBoard.set({
+      ...mockBoardDetail,
+      columns: [
+        {
+          ...mockBoardDetail.columns[0],
+          tasks: [mockTask]
+        },
+        mockBoardDetail.columns[1],
+        mockBoardDetail.columns[2]
+      ]
+    });
+
+    const updateReq: UpdateBoardColumnRequest = {
+      name: 'To Do Renamed',
+      order: 0,
+      targetStatus: TaskItemStatus.InProgress
+    };
+
+    const updatedColResponse: BoardColumnDto = {
+      id: 'col-1',
+      boardId: 'board-1',
+      name: 'To Do Renamed',
+      order: 0,
+      targetStatus: TaskItemStatus.InProgress
+    };
+
+    service.updateColumn('col-1', updateReq).subscribe(col => {
+      expect(col.id).toBe('col-1');
+      expect(col.name).toBe('To Do Renamed');
+      expect(col.targetStatus).toBe(TaskItemStatus.InProgress);
+
+      const board = service.currentBoard();
+      expect(board).not.toBeNull();
+      const updatedColInSignal = board?.columns.find(c => c.id === 'col-1');
+      expect(updatedColInSignal).toBeDefined();
+      expect(updatedColInSignal?.name).toBe('To Do Renamed');
+      expect(updatedColInSignal?.targetStatus).toBe(TaskItemStatus.InProgress);
+      expect(updatedColInSignal?.order).toBe(0);
+      // Tasks MUST be preserved
+      expect(updatedColInSignal?.tasks.length).toBe(1);
+      expect(updatedColInSignal?.tasks[0].id).toBe('task-1');
+      expect(updatedColInSignal?.tasks[0].title).toBe('Existing Task');
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiUrl}/columns/col-1`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual(updateReq);
+    req.flush(updatedColResponse);
   });
 });

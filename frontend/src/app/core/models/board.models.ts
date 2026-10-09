@@ -52,6 +52,12 @@ export interface CreateBoardColumnRequest {
   targetStatus?: TaskItemStatus;
 }
 
+export interface UpdateBoardColumnRequest {
+  name: string;
+  order: number;
+  targetStatus: TaskItemStatus;
+}
+
 export interface ColumnOrderDto {
   columnId: string;
   order: number;

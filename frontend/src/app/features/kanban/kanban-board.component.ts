@@ -60,6 +60,12 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   readonly isSubmittingColumn = signal(false);
   readonly columnErrorMessage = signal<string | null>(null);
 
+  // Column Edit Modal State
+  readonly columnToEdit = signal<BoardColumnDetailDto | null>(null);
+  readonly isSubmittingEditColumn = signal(false);
+  readonly editColumnErrorMessage = signal<string | null>(null);
+  readonly isEditColumnModalOpen = computed(() => !!this.columnToEdit());
+
   // Column Deletion Confirmation Modal State
   readonly columnToDelete = signal<BoardColumnDetailDto | null>(null);
   readonly isDeletingColumn = signal(false);
@@ -72,6 +78,11 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   readonly TaskItemStatus = TaskItemStatus;
 
   readonly columnForm = this.fb.nonNullable.group({
+    name: ['', [Validators.required, Validators.maxLength(100)]],
+    targetStatus: [TaskItemStatus.Todo, [Validators.required]]
+  });
+
+  readonly editColumnForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
     targetStatus: [TaskItemStatus.Todo, [Validators.required]]
   });
@@ -221,6 +232,50 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
         this.isSubmittingColumn.set(false);
         const msg = err.error?.detail || err.error?.message || 'Errore durante la creazione della colonna.';
         this.columnErrorMessage.set(msg);
+      }
+    });
+  }
+
+  // Column Edit Methods
+  openEditColumnModal(col: BoardColumnDetailDto): void {
+    this.columnToEdit.set(col);
+    this.editColumnErrorMessage.set(null);
+    this.editColumnForm.setValue({
+      name: col.name,
+      targetStatus: col.targetStatus
+    });
+  }
+
+  closeEditColumnModal(): void {
+    this.columnToEdit.set(null);
+  }
+
+  onUpdateColumn(): void {
+    if (this.editColumnForm.invalid) {
+      this.editColumnForm.markAllAsTouched();
+      return;
+    }
+    const col = this.columnToEdit();
+    if (!col) return;
+
+    this.isSubmittingEditColumn.set(true);
+    this.editColumnErrorMessage.set(null);
+
+    const { name, targetStatus } = this.editColumnForm.getRawValue();
+
+    this.boardService.updateColumn(col.id, {
+      name: name.trim(),
+      order: col.order,
+      targetStatus: Number(targetStatus)
+    }).subscribe({
+      next: () => {
+        this.isSubmittingEditColumn.set(false);
+        this.closeEditColumnModal();
+      },
+      error: (err) => {
+        this.isSubmittingEditColumn.set(false);
+        const msg = err.error?.detail || err.error?.message || 'Errore durante la modifica della colonna.';
+        this.editColumnErrorMessage.set(msg);
       }
     });
   }

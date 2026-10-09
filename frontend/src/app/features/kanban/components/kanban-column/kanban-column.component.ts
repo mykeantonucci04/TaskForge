@@ -21,6 +21,7 @@ export class KanbanColumnComponent {
 
   readonly moveLeft = output<void>();
   readonly moveRight = output<void>();
+  readonly editColumn = output<void>();
   readonly deleteColumn = output<void>();
   readonly addTask = output<{columnId: string, title: string}>();
   readonly openTask = output<string>();
