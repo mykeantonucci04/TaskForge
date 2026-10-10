@@ -1,0 +1,83 @@
+<div class="filter-toolbar">
+  <div class="filter-group search-group">
+    <div class="search-input-wrapper">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="text"
+        class="form-input search-input"
+        placeholder="Cerca per titolo o descrizione..."
+        [value]="search()"
+        (input)="onSearchInput($event)"
+        aria-label="Cerca per titolo o descrizione"
+      />
+      @if (search()) {
+        <button
+          type="button"
+          class="clear-search-btn"
+          (click)="onClearSearch()"
+          aria-label="Cancella testo di ricerca"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="18" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="filter-group select-group">
+    <label class="filter-label" for="priority-filter">Priorità:</label>
+    <select
+      id="priority-filter"
+      class="form-select filter-select"
+      [value]="priority() ?? ''"
+      (change)="onPriorityChange($event)"
+      aria-label="Filtra per priorità"
+    >
+      <option value="">Tutte le priorità</option>
+      <option [value]="TaskPriority.Low">Bassa</option>
+      <option [value]="TaskPriority.Medium">Media</option>
+      <option [value]="TaskPriority.High">Alta</option>
+      <option [value]="TaskPriority.Urgent">Urgente</option>
+    </select>
+  </div>
+
+  <div class="filter-group select-group">
+    <label class="filter-label" for="label-filter">Etichetta:</label>
+    <select
+      id="label-filter"
+      class="form-select filter-select"
+      [value]="labelId() ?? ''"
+      (change)="onLabelChange($event)"
+      aria-label="Filtra per etichetta"
+    >
+      <option value="">Tutte le etichette</option>
+      @for (label of labels(); track label.id) {
+        <option [value]="label.id">
+          ● {{ label.name }}
+        </option>
+      }
+    </select>
+  </div>
+
+  @if (hasActiveFilters()) {
+    <div class="filter-actions">
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm reset-btn"
+        (click)="onReset()"
+        aria-label="Azzera filtri"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <span>Azzera filtri</span>
+      </button>
+    </div>
+  }
+</div>

@@ -79,6 +79,12 @@
   cursor: not-allowed;
 }
 
+.btn-edit-col:hover:not(:disabled) {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
+}
+
 .btn-delete-col:hover:not(:disabled) {
   background-color: var(--color-danger-bg);
   color: var(--color-danger);

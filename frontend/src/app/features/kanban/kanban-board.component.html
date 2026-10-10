@@ -61,15 +61,22 @@
   @if (boardService.isLoading()) {
     <app-loading-spinner message="Caricamento board Kanban..."></app-loading-spinner>
   } @else if (boardService.currentBoard()) {
+    <app-board-filter-toolbar
+      [labels]="availableLabels()"
+      (filterChange)="onFilterChange($event)"
+      (reset)="onResetFilters()"
+    ></app-board-filter-toolbar>
+
     <div class="board-canvas" cdkDropListGroup>
-      @for (col of boardService.currentBoard()?.columns; track col.id; let index = $index) {
+      @for (col of filteredColumns(); track col.id; let index = $index) {
         <app-kanban-column
           [column]="col"
           [index]="index"
-          [totalColumns]="boardService.currentBoard()?.columns?.length || 1"
+          [totalColumns]="filteredColumns().length || 1"
           [activeAddColumnId]="activeAddColumnId()"
           (moveLeft)="onMoveColumnLeft(col, index)"
           (moveRight)="onMoveColumnRight(col, index)"
+          (editColumn)="openEditColumnModal(col)"
           (deleteColumn)="confirmDeleteColumn(col)"
           (addTask)="onCreateQuickTask($event.columnId, $event.title)"
           (openTask)="openTaskDetail($event)"
@@ -134,6 +141,50 @@
         <button type="button" class="btn btn-secondary" (click)="closeCreateColumnModal()">Annulla</button>
         <button type="submit" class="btn btn-primary" [disabled]="columnForm.invalid || isSubmittingColumn()">
           {{ isSubmittingColumn() ? 'Aggiunta in corso...' : 'Aggiungi Colonna' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-modal
+    [isOpen]="isEditColumnModalOpen()"
+    [title]="'Modifica Colonna'"
+    (close)="closeEditColumnModal()"
+  >
+    <form [formGroup]="editColumnForm" (ngSubmit)="onUpdateColumn()">
+      @if (editColumnErrorMessage()) {
+        <div class="alert alert-danger">{{ editColumnErrorMessage() }}</div>
+      }
+      <div class="form-group">
+        <label class="form-label" for="edit-column-name">Nome Colonna</label>
+        <input
+          id="edit-column-name"
+          type="text"
+          class="form-input"
+          placeholder="es. Code Review, QA, Bloccati..."
+          formControlName="name"
+        />
+        @if (editColumnForm.get('name')?.invalid && editColumnForm.get('name')?.touched) {
+          <span class="form-error">Il nome della colonna è obbligatorio.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="edit-column-status">Stato di Destinazione Task</label>
+        <select id="edit-column-status" class="form-select" formControlName="targetStatus">
+          <option [value]="TaskItemStatus.Backlog">Arretrato (Backlog)</option>
+          <option [value]="TaskItemStatus.Todo">Da Fare (Todo)</option>
+          <option [value]="TaskItemStatus.InProgress">In Corso (InProgress)</option>
+          <option [value]="TaskItemStatus.InReview">In Revisione (InReview)</option>
+          <option [value]="TaskItemStatus.Done">Completato (Done)</option>
+        </select>
+        <span class="form-hint">I task assegnati o spostati in questa colonna acquisiranno questo stato.</span>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeEditColumnModal()">Annulla</button>
+        <button type="submit" class="btn btn-primary" [disabled]="editColumnForm.invalid || isSubmittingEditColumn()">
+          {{ isSubmittingEditColumn() ? 'Salvataggio in corso...' : 'Salva Modifiche' }}
         </button>
       </div>
     </form>

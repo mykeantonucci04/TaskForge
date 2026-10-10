@@ -165,6 +165,21 @@ export class TaskDetailModalComponent {
     });
   }
 
+  onDeleteComment(commentId: string): void {
+    this.taskService.deleteComment(commentId).subscribe({
+      next: () => {
+        const current = this.taskDetail();
+        if (current) {
+          this.taskDetail.set({
+            ...current,
+            comments: current.comments.filter(c => c.id !== commentId)
+          });
+          this.taskUpdated.emit();
+        }
+      }
+    });
+  }
+
   onAssignLabel(labelId: string): void {
     const task = this.taskDetail();
     if (!labelId || !task) return;

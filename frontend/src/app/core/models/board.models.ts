@@ -1,4 +1,10 @@
-import { TaskDto } from './task.models';
+import { TaskDto, TaskPriority } from './task.models';
+
+export interface BoardFilterCriteria {
+  search: string;
+  priority: TaskPriority | null;
+  labelId: string | null;
+}
 
 export enum TaskItemStatus {
   Backlog = 1,
@@ -50,6 +56,12 @@ export interface CreateBoardRequest {
 export interface CreateBoardColumnRequest {
   name: string;
   targetStatus?: TaskItemStatus;
+}
+
+export interface UpdateBoardColumnRequest {
+  name: string;
+  order: number;
+  targetStatus: TaskItemStatus;
 }
 
 export interface ColumnOrderDto {

@@ -1,4 +1,6 @@
-import { TaskItemStatus } from './board.models';
+import { TaskItemStatus, BoardFilterCriteria } from './board.models';
+
+export type { BoardFilterCriteria };
 
 export enum TaskPriority {
   Low = 1,
@@ -40,6 +42,7 @@ export interface TaskDto {
   position: number;
   dueDateUtc?: string | null;
   createdAtUtc: string;
+  labels?: LabelDto[];
 }
 
 export interface TaskDetailDto extends TaskDto {
